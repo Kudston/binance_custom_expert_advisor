@@ -1,0 +1,7 @@
+{
+    "exchange":"binance",
+    "pair":"XRP/USDT:USDT",
+    "timeframe":"15m",
+    "apiKey":"d242e7fb88aee0f5a783e28ec9f451f08c3b3036bc3c553fe212259082ce2b18",
+    "apiSecret":"a35dcb0037cb004e452a2ef32f0996aed8905d9342b4721d3ca79360d234f748"
+}
