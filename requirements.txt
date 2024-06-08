@@ -2,3 +2,4 @@ pandas
 ta
 numpy
 binance-api
+python-binance

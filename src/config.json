@@ -1,7 +1,7 @@
 {
     "exchange":"binance",
     "pair":"ETH/USDT:USDT",
-    "timeframe":"15m",
+    "timeframe":"5m",
     "apiKey":"",
     "apiSecret":"",
     "downloadNewData":true,
