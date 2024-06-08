@@ -10,6 +10,7 @@ class ordersManager:
     def __init__(self, config_data:BotConfigClass) -> None:
         self.config_data:BotConfigClass = config_data
         self.client: Client = Client(config_data.api_key, config_data.api_secret, testnet=config_data.testnet)
+        self.positiondatabase = OrdersDatabaseMgt()
         self.pairQuantityPrecision = self.config_data.pairsInformation['precision']['amount']
         self.openBuyPositionsIds = []
         self.openSellPositionsIds = []
@@ -26,7 +27,7 @@ class ordersManager:
                 quantity=float(amount),
                 positionSide="LONG"
             )
-        print(trade_result)
+        self.positiondatabase.AddPosition(trade_result)
 
     def SellOrder(self, pair: str, curr_Ask: float):
         amount = self.GetQuantityPrecised(curr_Ask, self.config_data.stakeAmount)
@@ -40,7 +41,7 @@ class ordersManager:
                 quantity=float(amount),
                 positionSide="SHORT"
             )
-        print(trade_result)
+        self.positiondatabase.AddPosition(trade_result)
 
     def CloseBuyOrder(self, pair, quantity: float):
         result = self.client.futures_create_order(
@@ -69,5 +70,62 @@ class ordersManager:
 
 class OrdersDatabaseMgt:
     def __init__(self):
-        self.trades_dataframe:pd.DataFrame = os.path.join(database_folder,"positions.csv")
+        self.trades_dataframe_path = os.path.join(database_folder,"positions.csv")
+        self.trades_df: pd.DataFrame = None
+
+        columns = [
+            "avgPrice",
+            "clientOrderId",
+            "cumQuote",
+            "executedQty",
+            "orderId",
+            "origQty",
+            "origType",
+            "price",
+            "reduceOnly",
+            "side",
+            "positionSide",
+            "status",
+            "stopPrice",                # please ignore when order type is TRAILING_STOP_MARKET
+            "closePosition",   # if Close-All
+            "symbol",
+            "time",              # order time
+            "timeInForce",
+            "type",
+            "activatePrice",            # activation price, only return with TRAILING_STOP_MARKET order
+            "priceRate",                 # callback rate, only return with TRAILING_STOP_MARKET order
+            "updateTime",        # update time
+            "workingType",
+            "priceProtect",            # if conditional order trigger is protected  
+            "priceMatch",              #price match mode
+            "selfTradePreventionMode", #self trading preventation mode
+            "goodTillDate"      #order pre-set auot cancel time for TIF GTD order
+                ]
         
+        self.trades_df = pd.DataFrame(columns=columns)
+
+    def AddPosition(self, orders_info: dict):
+        columns_availabel = self.trades_df.columns
+        new_position = pd.DataFrame(columns=columns_availabel)
+        for label in orders_info.keys():
+            if label in columns_availabel:
+                new_position[label] = orders_info.get(label)
+        
+        print(new_position)
+        self.trades_df = pd.concat([self.trades_df, new_position],axis=0).reset_index(drop=True)
+        print(self.trades_df)
+        
+    def GetPositions(self, type:str, is_open=True):
+        positionsdf = self.trades_df.loc[
+            (self.trades_df['side']==type.upper())
+            &(self.trades_df.status=='active' if is_open else 'closed')
+        ]
+        return positionsdf
+    
+    def GetPositionsCount(self, type:str, is_open=True):
+        positionsdfcount = self.trades_df.loc[
+            (self.trades_df['side']==type.upper())
+            &(self.trades_df.status==('active' if is_open else 'closed'))
+        ].shape[0]
+        return positionsdfcount
+    
