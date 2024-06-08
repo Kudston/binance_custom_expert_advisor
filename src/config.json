@@ -1,9 +1,9 @@
 {
     "exchange":"binance",
-    "pair":"ETH/USDT:USDT",
+    "pair":"BTC/USDT:USDT",
     "timeframe":"5m",
-    "apiKey":"d242e7fb88aee0f5a783e28ec9f451f08c3b3036bc3c553fe212259082ce2b18",
-    "apiSecret":"a35dcb0037cb004e452a2ef32f0996aed8905d9342b4721d3ca79360d234f748",
+    "apiKey":"",
+    "apiSecret":"",
     "downloadNewData":true,
     "test_net":true,
     "stakeAmount":100
