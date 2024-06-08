@@ -44,24 +44,28 @@ class ordersManager:
         self.positiondatabase.AddPosition(trade_result)
 
     def CloseBuyOrder(self, pair, quantity: float):
+        quantity = abs(round(quantity,self.pairQuantityPrecision))
+        print("close amount: ",quantity)
         result = self.client.futures_create_order(
             symbol=pair,
             type=self.client.FUTURE_ORDER_TYPE_MARKET,
             quantity=round(quantity, self.pairQuantityPrecision),
-            side=self.client.SIDE_BUY,
-            positionSide="SHORT"
+            side=self.client.SIDE_SELL,
+            positionSide="LONG"
         )
-        print(result)
+
 
     def CloseSellOrder(self, pair, quantity: float):
+        quantity = abs(round(quantity,self.pairQuantityPrecision))
+        print("close amount: ",quantity)
         result = self.client.futures_create_order(
             symbol=pair,
             type=self.client.FUTURE_ORDER_TYPE_MARKET,
-            side=self.client.SIDE_SELL,
-            quantity=round(quantity,self.pairQuantityPrecision),
-            positionSide= "LONG",
+            side=self.client.SIDE_BUY,
+            quantity=quantity,
+            positionSide= "SHORT",
         )
-        print(result)
+        
 
     def GetQuantityPrecised(self, price, stakeAmount):
         quantity = round(stakeAmount/price,self.pairQuantityPrecision)
@@ -73,11 +77,10 @@ class OrdersDatabaseMgt:
         self.trades_dataframe_path = os.path.join(database_folder,"positions.csv")
         self.trades_df: pd.DataFrame = None
         self.client: Client = client
-        columns = [
-
-        ]
-        
-        self.trades_df = pd.DataFrame(columns=columns)
+        self.buyPosition = {}
+        self.sellPosition = {}
+        self.buyAmount = 0
+        self.sellAmount = 0
 
     def AddPosition(self, orders_info: dict):
         columns_availabel = self.trades_df.columns
@@ -86,19 +89,19 @@ class OrdersDatabaseMgt:
             if label in columns_availabel:
                 new_position[label] = orders_info.get(label)
         
-        print(new_position)
         self.trades_df = pd.concat([self.trades_df, new_position],axis=0).reset_index(drop=True)
-        print(self.trades_df)
         
-    def GetPositions(self, type:str, is_open=True):
-        positions = self.client.futures_position_information()
-        print(positions)
-        # positionsdf = self.trades_df.loc[
-        #     (self.trades_df['side']==type.upper())
-        #     &(self.trades_df.status=='active' if is_open else 'closed')
-        # ]
-        # return positionsdf
-    
+    def GetPositions(self, pair:str):
+        mposition = {}
+        positions = self.client.futures_position_information(symbol=pair)
+        for position in positions:
+            if position['positionSide']=="SHORT":
+                self.sellPosition = position
+            elif position['positionSide']=="LONG":
+                self.buyPosition = position
+        self.buyAmount = float(self.buyPosition['positionAmt'])
+        self.sellAmount = float(self.sellPosition['positionAmt'])
+
     def GetPositionsCount(self, type:str, is_open=True):
         positionsdfcount = self.trades_df.loc[
             (self.trades_df['side']==type.upper())

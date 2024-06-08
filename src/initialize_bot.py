@@ -6,7 +6,8 @@ from src.timeframeManagement import TimeframeMgt
 import os
 
 logpath = os.path.abspath("logs/errors.log")
-logging.basicConfig(filename=logpath, level=logging.DEBUG, 
+
+logging.basicConfig(filename=logpath, level=logging.DEBUG,
                     format='%(asctime)s:%(levelname)s:%(message)s')
 
 ##GET CONFIGURATION PARAMETERS
@@ -16,10 +17,11 @@ def get_config_file(file_path):
         return dict(new_json)
 
 ##GET EXCHANGE INFORMATION FOR VERIFICATIONS
-async def get_exchange_info(exchange_name: str):
+async def get_exchange_info(exchange_name: str, test_mode: True):
     try:
         exchange = getattr(ccxt, exchange_name)
-        exchange = exchange()
+        exchange:ccxt.Exchange = exchange()
+        exchange.set_sandbox_mode(test_mode)
         markets = exchange.load_markets()
         return (exchange, markets)
     except:
@@ -39,16 +41,16 @@ class BotConfigClass:
         self.points = None
         self.takeProfit = None
         self.stopLoss = None
+        self.testnet  = bool(self.configData.get('test_net', True))
         self.verify_configurations()
         self.TimeFrameClass = TimeframeMgt(self.timeframe, self.timeframes)
         self.stakeAmount = int(self.configData.get('stakeAmount', 100))
         self.api_key    = str(self.configData.get('apiKey', ''))
         self.api_secret = str(self.configData.get('apiSecret', ''))
-        self.testnet  = bool(self.configData.get('test_net', True))
         self.download_new_data = bool(self.configData.get('downloadNewData', False))
 
     async def get_market_data(self):
-        self.exchange, self.markets = await get_exchange_info(self.configData['exchange'])
+        self.exchange, self.markets = await get_exchange_info(self.configData['exchange'],self.testnet)
         self.pairs = self.markets.keys()
         self.timeframes = self.exchange.timeframes.keys()
 

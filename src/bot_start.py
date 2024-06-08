@@ -1,3 +1,5 @@
+import sys
+sys.path.append("..")
 from src.initialize_bot import BotConfigClass
 from src.data_mgt import DataManagement
 from src.signals import Signals
@@ -6,15 +8,16 @@ import os
 import asyncio
 
 config_path = os.path.abspath('config.json')
+throttle_seconds = 2
 
 botconfig = BotConfigClass(config_path)
 datamgt = DataManagement(botconfig)
 signalsMgt = Signals(datamgt)
 
 async def main(signal: Signals):
-    signal.ConfirmSignals()
-    time.sleep(1000)
+    while True:
+        signal.ConfirmSignals()
+        time.sleep(throttle_seconds)
 
 if __name__=="__main__":
-    while True:
-        asyncio.run(main())
+    asyncio.run(main(signalsMgt))

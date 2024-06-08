@@ -1,7 +1,7 @@
 import sys
 sys.path.append("..")
 from src.data_mgt import DataManagement
-from src.initialize_bot import BotConfigClass
+from src.initialize_bot import BotConfigClass, logging
 from src.orderManagement import ordersManager
 import pandas as pd
 import datetime
@@ -9,6 +9,9 @@ import time
 from ta.volatility import BollingerBands, AverageTrueRange
 from ta.trend import EMAIndicator
 
+import warnings 
+
+warnings.filterwarnings('ignore')
 
 class Signals:
     def __init__(self, datamgt: DataManagement) -> None:
@@ -17,12 +20,18 @@ class Signals:
         self.order_mgt: ordersManager = ordersManager(self.configData)
         #initialize dataframe
         self.data_mgt.InitializeDataFrame(self.configData.download_new_data)
-
+        
         self.last_candle_data = None
         self.df = None
         self.best_bid = 0
         self.best_ask = 0
+        self.engineUpdateCount = 0
+        while self.engineUpdateCount<20:
+            if not self.data_mgt.UpdateData():
+                break
+            self.engineUpdateCount +=1
 
+        self.CheckLastCandleSignal(True)
 
     period = 20
     deviation = 2
@@ -31,46 +40,83 @@ class Signals:
     
     traded_last_bar = False
 
+    
     def ConfirmSignals(self):
         #send positions using the symbol in pairsINformation dictionary
-        self.CheckLastCandleSignal()
-        self.order_mgt.BuyOrder(self.configData.pairsInformation['id'], self.best_ask)
-        if self.last_candle_data['buy_signal'] and self.best_ask>=self.last_candle_data['ema']:
-            self.order_mgt.BuyOrder(self.configData.pairsInformation['id'], self.best_bid)
+        try:
 
-        elif self.last_candle_data['sell_signal'] and self.best_bid<=self.last_candle_data['ema']:
-            self.order_mgt.SellOrder(self.configData.pairsInformation['id'], self.best_ask)
+            self.CheckLastCandleSignal()
+            
+            if not self.traded_last_bar:
+                if (self.last_candle_data['buy_signal']==1) and (self.best_ask>=self.last_candle_data['lower_band']):
+                    logging.info('placing buy order')
+                    print('placing buy order')
+                    self.traded_last_bar = True
+                    self.order_mgt.BuyOrder(self.configData.pairsInformation['id'], self.best_bid)
 
-        if len(self.order_mgt.openBuyPositionsIds)>0 and self.best_bid>=self.last_candle_data['ema']:
-            self.order_mgt.CloseBuyOrder(self.configData.pairsInformation['id'], 100)
+                elif (self.last_candle_data['sell_signal']==1) and (self.best_bid<=self.last_candle_data['upper_band']):
+                    logging.info('placing sell order')
+                    print('placing sell order')
+                    self.traded_last_bar = True
+                    self.order_mgt.SellOrder(self.configData.pairsInformation['id'], self.best_ask)
 
-        if len(self.order_mgt.openSellPositionsIds)>0 and self.best_ask<=self.last_candle_data['ema']:
-            self.order_mgt.CloseSellOrder(self.configData.pairsInformation['id'], 100)
+            if  self.order_mgt.positiondatabase.buyAmount>0 and self.best_bid>=self.last_candle_data['ema']:
+                logging.info('closing buy order')
+                print('closing buy order')
+                self.order_mgt.CloseBuyOrder(self.configData.pairsInformation['id'], self.order_mgt.positiondatabase.buyAmount)
 
-    def CheckLastCandleSignal(self):
-        if self.data_mgt.UpdateData():
-            #populate indicators copies raw data into self.df
-            self.PopulateIndicators()
+            if self.order_mgt.positiondatabase.sellAmount<0 and self.best_ask<=self.last_candle_data['ema']:
+                logging.info('closing sell order')
+                print('closing sell order')
+                self.order_mgt.CloseSellOrder(self.configData.pairsInformation['id'], self.order_mgt.positiondatabase.sellAmount)
+        except Exception as raised_exception:
+            print(str(raised_exception))
 
-            #populate signals modifies self.df and adds signals to it
-            self.PopulateSignals(self.df)
-        order_book = self.configData.exchange.fetch_order_book(self.configData.pair, 10)
-        self.best_bid = order_book['bids'][0][0]
-        self.best_ask = order_book['asks'][0][0]
+    def CheckLastCandleSignal(self, forceUpdate=False):
+        
+        try:
+            if self.data_mgt.UpdateData() or forceUpdate:
+                self.traded_last_bar = False
+                #populate indicators copies raw data into self.df
+                self.PopulateIndicators()
 
+                #populate signals modifies self.df and adds signals to it
+                self.PopulateSignals(self.df)
+                print("buy positions amount: ",self.order_mgt.positiondatabase.buyAmount)
+                print("sell positions amount: ",self.order_mgt.positiondatabase.sellAmount)
+
+                
+            #check for positions open
+            self.order_mgt.positiondatabase.GetPositions(self.configData.pairsInformation['id'])
+            
+            order_book = self.configData.exchange.fetch_order_book(self.configData.pair, 10)
+            self.best_bid = order_book['bids'][0][0]
+            self.best_ask = order_book['asks'][0][0]
+            # print("bid: ",self.best_bid)
+            # print("ask: ",self.best_ask)
+            # print("ema: ",self.last_candle_data['ema'])
+            # print('bollu: ',self.last_candle_data['upper_band'])
+            # print('bolll: ',self.last_candle_data['lower_band'])
+            
+            # print(pd.DataFrame(self.configData.exchange.fetch_ohlcv(self.configData.pair, self.configData.timeframe)).tail(4))
+            # print(self.df.tail(4))
+            # print(datetime.datetime.fromtimestamp(self.last_candle_data['datetime']/1000))
+        except Exception as raised_exception:
+            print(str(raised_exception))
 
     def PopulateIndicators(self):
         self.df = self.data_mgt.df.copy()
         
         self.df['midprice'] = round((self.df.high+self.df.low)/2, self.configData.digits)
-        boll = BollingerBands(self.df['midprice'], self.period, self.deviation)
+        boll = BollingerBands(self.df['close'], self.period, self.deviation)
         self.df['upper_band'] = boll.bollinger_hband()
         self.df['lower_band'] = boll.bollinger_lband()
-        ema = EMAIndicator(self.df['midprice'], self.period)
+        ema = EMAIndicator(self.df['close'], self.period)
         self.df['ema'] = ema.ema_indicator()
         self.df['atr'] = (AverageTrueRange(self.df['high'], self.df['low'], self.df['close'], self.period).
                           average_true_range())
         self.df['hour'] = self.df['datetime'].apply(lambda x: datetime.datetime.fromtimestamp(x / 1000).hour)
+        
 
     def PopulateSignals(self, dataframe: pd.DataFrame):
         dataframe.loc[(

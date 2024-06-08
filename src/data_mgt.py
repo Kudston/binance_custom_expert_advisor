@@ -21,7 +21,7 @@ class DataManagement:
         
         self.next_candle_time = None    #datetime timestamp in seconds
         self.last_candle_time = None    #datetime timestamp in seconds
-
+        self.timeFrameSeconds = self.configData.TimeFrameClass.GetTimeframeSeconds()
         self.columns = ['datetime','open','high','low','close','volume']
 
     def InitializeDataFrame(self, download_new: bool):
@@ -29,42 +29,55 @@ class DataManagement:
             if download_new:
                 if not os.path.exists(data_path_folder):
                    os.mkdir(data_path_folder)
+                
+                current_time = self.configData.exchange.fetch_time()
                 time.sleep(self.configData.exchange.rateLimit / 1000)
-                price_data = self.configData.exchange.fetch_ohlcv(self.configData.pair, self.configData.timeframe)
+                price_data = self.configData.exchange.fetch_ohlcv(self.configData.pair, self.configData.timeframe, 
+                                                                  current_time-(self.timeFrameSeconds*self.initial_data_counts*1000),
+                                                                  self.initial_data_counts)
+                
                 self.df = pd.DataFrame(price_data, columns=self.columns)
+                print(self.df.shape)
                 self.df = self.df.iloc[:-1,:]
                 self.df.to_csv(self.data_path,index=False)
             else:
                 if not os.path.exists(data_path_folder):
                    raise ("Data file does not already exist.")
-                self.df = pd.read_csv(self.data_path)         
+                self.df = pd.read_csv(self.data_path)
 
             last_candle = self.df.iloc[-1].squeeze()
             self.last_candle_time = int(last_candle['datetime'] /1000)
-            self.next_candle_time = (self.last_candle_time + 
-                                     self.configData.TimeFrameClass.GetTimeframeSeconds()*2)
-                
+            self.next_candle_time = (self.last_candle_time + self.timeFrameSeconds)
         except Exception as raised_exception:
             raise Exception(str(raised_exception))
         
     def GetNewData(self):
-        price_data = self.configData.exchange.fetch_ohlcv(self.configData.pair, self.configData.timeframe, 
-                                                          self.next_candle_time*1000)
+        last_data_time = self.df.iloc[-1].squeeze()['datetime']
+
+        price_data = self.configData.exchange.fetch_ohlcv(self.configData.pair, self.configData.timeframe,
+                                                          (last_data_time/1000+self.timeFrameSeconds)*1000, self.initial_data_counts)
         new_df = pd.DataFrame(price_data, columns=self.columns)
-        new_df = new_df.iloc[:-1,:]
-        return new_df
+
+        try:
+            new_df = new_df.iloc[:-1,]
+            return new_df
+        except:
+            return pd.DataFrame()
 
     def UpdateData(self)->bool:
         try:
-            if datetime.datetime.now().timestamp()>self.next_candle_time:
+            latest_datetime = self.configData.exchange.fetch_time()
+            if (latest_datetime/1000)>self.next_candle_time+self.timeFrameSeconds:
                 new_df = self.GetNewData()
+                if len(new_df)==0:
+                    return False
+
                 self.df = pd.concat([self.df, new_df], axis=0).reset_index(drop=True)
                 self.last_candle_time = self.df.iloc[-1].squeeze()['datetime']/1000
-                self.next_candle_time = (self.last_candle_time + 
-                                        self.configData.TimeFrameClass.GetTimeframeSeconds()*2)
+                self.next_candle_time = (self.last_candle_time + self.timeFrameSeconds)
                 print("current last bar: ",datetime.datetime.fromtimestamp(self.last_candle_time))
                 print("next bar time: ",datetime.datetime.fromtimestamp(self.next_candle_time))
                 return True
             return False
         except Exception as raised_exception:
-            raise Exception(str(raised_exception))
+            raise Exception(str(raised_exception))  
