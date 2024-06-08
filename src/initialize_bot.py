@@ -3,8 +3,10 @@ import ccxt
 import json
 import logging
 from src.timeframeManagement import TimeframeMgt
+import os
 
-logging.basicConfig(filename='/home/kudston/projects/binance_ea/src/logs/errors.log', level=logging.DEBUG, 
+logpath = os.path.abspath("logs/errors.log")
+logging.basicConfig(filename=logpath, level=logging.DEBUG, 
                     format='%(asctime)s:%(levelname)s:%(message)s')
 
 ##GET CONFIGURATION PARAMETERS

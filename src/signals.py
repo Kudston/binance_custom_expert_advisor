@@ -90,8 +90,3 @@ class Signals:
         'sell_signal'] = 1
 
         self.last_candle_data = dataframe.iloc[-1].squeeze()
-
-start_time = time.time()
-datamgt = Signals(DataManagement(BotConfigClass('/home/kudston/projects/binance_ea/src/config.json')))
-datamgt.ConfirmSignals()
-print(time.time()-start_time)
