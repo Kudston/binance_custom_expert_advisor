@@ -86,7 +86,10 @@ class Signals:
                 self.PopulateSignals(self.df)
                 print("buy positions amount: ",self.order_mgt.positiondatabase.buyAmount)
                 print("sell positions amount: ",self.order_mgt.positiondatabase.sellAmount)
-
+                print('last bar ema: ',self.last_candle_data['ema'])
+                print('last bar upBand: ',self.last_candle_data['upper_band'])
+                print('last bar lowerBand: ', self.last_candle_data['lower_band'])
+                print('last close: ', self.last_candle_data['close'])
                 
             #check for positions open
             self.order_mgt.positiondatabase.GetPositions(self.configData.pairsInformation['id'])
