@@ -48,8 +48,6 @@ class Signals:
             self.CheckLastCandleSignal()
 
             if not self.traded_last_bar:
-                # self.order_mgt.SellOrder(self.configData.pairsInformation['id'], self.best_ask, self.last_price_time, self.last_candle_data)
-                self.traded_last_bar = True
                 if (self.last_candle_data['buy_signal']==1) and (self.best_ask>=self.last_candle_data['lower_band']):
                     logging.info('placing buy order')
                     print('placing buy order')
