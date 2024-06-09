@@ -3,3 +3,4 @@ ta
 numpy
 binance-api
 python-binance
+ccxt
