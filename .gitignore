@@ -1,4 +1,4 @@
 __pycache__/
 logs
 data
-trades_data/*
+trades_data/

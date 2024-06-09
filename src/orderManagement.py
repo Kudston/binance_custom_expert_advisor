@@ -168,7 +168,7 @@ class OrdersDatabaseMgt:
         self.trades_dataframe_path = os.path.join(database_folder,"positions.csv")
         self.config     = config
         self.client:ccxt.Exchange = self.config.exchange
-        self.currentSessionFile = os.path.join(database_folder, f"trades_data_{self.config.pairsInformation['id']}_time_{str(self.config.botStartTime)[:9]}.csv")
+        self.currentSessionFile = os.path.join(database_folder, f"trades_data_{self.config.pairsInformation['id']}.csv")
         self.columns = None
         self.tradesDf = None
         self.buyPosition = {}
@@ -179,7 +179,9 @@ class OrdersDatabaseMgt:
     
     def InitiateOrderTable(self):
         self.columns = ['orderBarTime','realOrderTime','orderOpenPrice','pair', 'side','type']
-        self.tradesDf:pd.DataFrame = pd.DataFrame(columns=self.columns)
+        file_already_exist = os.path.exists(self.currentSessionFile)
+        self.tradesDf:pd.DataFrame = (pd.DataFrame(columns=self.columns) if not 
+                                      file_already_exist else pd.read_csv(self.currentSessionFile))
 
     def AddPosition(self, orders_info: dict):
         oCandleTime = datetime.datetime.fromtimestamp(orders_info['lastCandleTime']/1000)
@@ -208,17 +210,18 @@ class OrdersDatabaseMgt:
     def GetPositions(self, pair:str):
         if len(self.tradesDf)<=0:
             return
-        positions = self.tradesDf.iloc[-1].squeeze()
+        positions = self.tradesDf.iloc[0].squeeze()
+        
         if positions['type']=='open':
-            if positions['type']=='buy':
-                self.buyAmount = 100
-            elif positions['type']=='sell':
-                self.sellAmount = -100
-            else:
-                self.buyAmount = 0
-                self.sellAmount = 0
-        # self.buyAmount = float(self.buyPosition['positionAmt'])
-        # self.sellAmount = float(self.sellPosition['positionAmt'])
+            if positions['side']=='buy':
+                # print('found buy')
+                self.buyAmount = self.config.stakeAmount
+            elif positions['side']=='sell':
+                # print('found sell')
+                self.sellAmount = -self.config.stakeAmount
+        else:
+            self.buyAmount = 0
+            self.sellAmount = 0
 
     def GetPositionsCount(self, type:str, is_open=True):
         pass

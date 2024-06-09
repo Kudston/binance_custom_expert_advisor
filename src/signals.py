@@ -48,13 +48,19 @@ class Signals:
             self.CheckLastCandleSignal()
 
             if not self.traded_last_bar:
-                if (self.last_candle_data['buy_signal']==1) and (self.best_ask>=self.last_candle_data['lower_band']):
+                if ((self.last_candle_data['buy_signal']==1) and 
+                    (self.best_ask>=self.last_candle_data['lower_band']) and
+                    (self.order_mgt.positiondatabase.buyAmount==0)
+                    ):
                     logging.info('placing buy order')
                     print('placing buy order')
                     self.traded_last_bar = True
                     self.order_mgt.BuyOrder(self.configData.pairsInformation['id'], self.best_bid, self.last_price_time, self.last_candle_data)
 
-                elif (self.last_candle_data['sell_signal']==1) and (self.best_bid<=self.last_candle_data['upper_band']):
+                elif ((self.last_candle_data['sell_signal']==1) and 
+                      (self.best_bid<=self.last_candle_data['upper_band']) and
+                      (self.order_mgt.positiondatabase.sellAmount==0)
+                      ):
                     logging.info('placing sell order')
                     print('placing sell order')
                     self.traded_last_bar = True
@@ -93,7 +99,6 @@ class Signals:
                 
             #check for positions open
             self.order_mgt.positiondatabase.GetPositions(self.configData.pairsInformation['id'])
-            
             order_book = self.configData.exchange.fetch_order_book(self.configData.pair, 5)
             self.best_bid = order_book['bids'][0][0]
             self.best_ask = order_book['asks'][0][0]
