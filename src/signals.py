@@ -25,6 +25,7 @@ class Signals:
         self.df = None
         self.best_bid = 0
         self.best_ask = 0
+        self.last_price_time = 0
         self.engineUpdateCount = 0
         while self.engineUpdateCount<20:
             if not self.data_mgt.UpdateData():
@@ -44,31 +45,34 @@ class Signals:
     def ConfirmSignals(self):
         #send positions using the symbol in pairsINformation dictionary
         try:
-
             self.CheckLastCandleSignal()
-            
+
             if not self.traded_last_bar:
+                # self.order_mgt.SellOrder(self.configData.pairsInformation['id'], self.best_ask, self.last_price_time, self.last_candle_data)
+                self.traded_last_bar = True
                 if (self.last_candle_data['buy_signal']==1) and (self.best_ask>=self.last_candle_data['lower_band']):
                     logging.info('placing buy order')
                     print('placing buy order')
                     self.traded_last_bar = True
-                    self.order_mgt.BuyOrder(self.configData.pairsInformation['id'], self.best_bid)
+                    self.order_mgt.BuyOrder(self.configData.pairsInformation['id'], self.best_bid, self.last_price_time, self.last_candle_data)
 
                 elif (self.last_candle_data['sell_signal']==1) and (self.best_bid<=self.last_candle_data['upper_band']):
                     logging.info('placing sell order')
                     print('placing sell order')
                     self.traded_last_bar = True
-                    self.order_mgt.SellOrder(self.configData.pairsInformation['id'], self.best_ask)
+                    self.order_mgt.SellOrder(self.configData.pairsInformation['id'], self.best_ask, self.last_price_time, self.last_candle_data)
 
             if  self.order_mgt.positiondatabase.buyAmount>0 and self.best_bid>=self.last_candle_data['ema']:
                 logging.info('closing buy order')
                 print('closing buy order')
-                self.order_mgt.CloseBuyOrder(self.configData.pairsInformation['id'], self.order_mgt.positiondatabase.buyAmount)
+                self.order_mgt.CloseBuyOrder(self.configData.pairsInformation['id'], self.order_mgt.positiondatabase.buyAmount, 
+                                             self.best_bid, self.last_price_time, self.last_candle_data)
 
             if self.order_mgt.positiondatabase.sellAmount<0 and self.best_ask<=self.last_candle_data['ema']:
                 logging.info('closing sell order')
                 print('closing sell order')
-                self.order_mgt.CloseSellOrder(self.configData.pairsInformation['id'], self.order_mgt.positiondatabase.sellAmount)
+                self.order_mgt.CloseSellOrder(self.configData.pairsInformation['id'], self.order_mgt.positiondatabase.sellAmount,self.best_bid,
+                                               self.last_price_time, self.last_candle_data)
         except Exception as raised_exception:
             print(str(raised_exception))
 
@@ -89,18 +93,11 @@ class Signals:
             #check for positions open
             self.order_mgt.positiondatabase.GetPositions(self.configData.pairsInformation['id'])
             
-            order_book = self.configData.exchange.fetch_order_book(self.configData.pair, 10)
+            order_book = self.configData.exchange.fetch_order_book(self.configData.pair, 5)
             self.best_bid = order_book['bids'][0][0]
             self.best_ask = order_book['asks'][0][0]
-            # print("bid: ",self.best_bid)
-            # print("ask: ",self.best_ask)
-            # print("ema: ",self.last_candle_data['ema'])
-            # print('bollu: ',self.last_candle_data['upper_band'])
-            # print('bolll: ',self.last_candle_data['lower_band'])
-            
-            # print(pd.DataFrame(self.configData.exchange.fetch_ohlcv(self.configData.pair, self.configData.timeframe)).tail(4))
-            # print(self.df.tail(4))
-            # print(datetime.datetime.fromtimestamp(self.last_candle_data['datetime']/1000))
+            self.last_price_time = int(order_book['timestamp'])
+
         except Exception as raised_exception:
             print(str(raised_exception))
 

@@ -1,71 +1,162 @@
 from src.initialize_bot import BotConfigClass
-from binance import Client
 import pandas as pd
+import ccxt
 import os
+import datetime
 
 database_folder = os.path.abspath("trades_data")
-print(database_folder)
 
 class ordersManager:
     def __init__(self, config_data:BotConfigClass) -> None:
         self.config_data:BotConfigClass = config_data
-        self.client: Client = Client(config_data.api_key, config_data.api_secret, testnet=config_data.testnet)
-        self.positiondatabase = OrdersDatabaseMgt(self.client)
-        self.pairQuantityPrecision = self.config_data.pairsInformation['precision']['amount']
+        self.client: ccxt.Exchange = config_data.exchange
+        self.positiondatabase = OrdersDatabaseMgt(config_data)
+        self.pairQuantityPrecision = self.config_data.pairsInformation['precision']['amount'] #this doesnt work with some exchange, use at own risk
         self.openBuyPositionsIds = []
         self.openSellPositionsIds = []
         self.closedtrades = []
 
-    def BuyOrder(self, pair: str, curr_Ask: float):
-        amount = self.GetQuantityPrecised(curr_Ask, self.config_data.stakeAmount)
+    def BuyOrder(self, pair: str, curr_Ask: float, last_bid_time, last_candle_structure):
+
         takeProfitPrice = curr_Ask + self.config_data.takeProfit
         stopLossPrice = curr_Ask - self.config_data.stopLoss
-        trade_result = self.client.futures_create_order(
-                symbol=pair,
-                type=self.client.FUTURE_ORDER_TYPE_MARKET,
-                side="BUY",
-                quantity=float(amount),
-                positionSide="LONG"
-            )
-        self.positiondatabase.AddPosition(trade_result)
-
-    def SellOrder(self, pair: str, curr_Ask: float):
-        amount = self.GetQuantityPrecised(curr_Ask, self.config_data.stakeAmount)
-        takeProfitPrice = curr_Ask + self.config_data.takeProfit
-        stopLossPrice = curr_Ask - self.config_data.stopLoss
-
-        trade_result = self.client.futures_create_order(
-                symbol=pair,
-                type=self.client.FUTURE_ORDER_TYPE_MARKET,
-                side="SELL",
-                quantity=float(amount),
-                positionSide="SHORT"
-            )
-        self.positiondatabase.AddPosition(trade_result)
-
-    def CloseBuyOrder(self, pair, quantity: float):
-        quantity = abs(round(quantity,self.pairQuantityPrecision))
-        print("close amount: ",quantity)
-        result = self.client.futures_create_order(
-            symbol=pair,
-            type=self.client.FUTURE_ORDER_TYPE_MARKET,
-            quantity=round(quantity, self.pairQuantityPrecision),
-            side=self.client.SIDE_SELL,
-            positionSide="LONG"
-        )
-
-
-    def CloseSellOrder(self, pair, quantity: float):
-        quantity = abs(round(quantity,self.pairQuantityPrecision))
-        print("close amount: ",quantity)
-        result = self.client.futures_create_order(
-            symbol=pair,
-            type=self.client.FUTURE_ORDER_TYPE_MARKET,
-            side=self.client.SIDE_BUY,
-            quantity=quantity,
-            positionSide= "SHORT",
-        )
         
+        print(f'tp: {takeProfitPrice},  sl: {stopLossPrice}')
+        try:
+            trade_result = self.client.create_order(
+                    symbol=pair,
+                    type='market',
+                    side='buy',
+                    amount=float(self.config_data.stakeAmount)
+                )
+            
+            stoploss_order_params = {
+                'stopLossPrice':stopLossPrice,
+                'triggerDirection':'below'
+            }
+            sl_trade_result = self.client.create_order(
+                    symbol=pair,
+                    type='limit',
+                    side='sell',
+                    amount=float(self.config_data.stakeAmount),
+                    params=stoploss_order_params
+                )
+
+            takeprofit_order_params = {
+                'takeProfitPrice':takeProfitPrice,
+                'triggerDirection':'above'
+            }
+            tp_trade_result = self.client.create_order(
+                    symbol=pair,
+                    type='limit',
+                    side='sell',
+                    amount=float(self.config_data.stakeAmount),
+                    params=stoploss_order_params
+                )
+        except Exception as raised_exception:
+            raise raised_exception
+        finally:
+            order_info = {
+                'pair':pair,
+                'time':last_bid_time,
+                'lastCandleTime':last_candle_structure['datetime'],
+                'price':curr_Ask,
+                'side':'buy',
+                'type':'open'
+            }
+            self.positiondatabase.AddPosition(orders_info=order_info)
+
+    def SellOrder(self, pair: str, curr_Bid: float, last_ask_time, last_candle_structure):
+        # amount = self.GetQuantityPrecised(curr_Ask, self.config_data.stakeAmount)
+        takeProfitPrice = curr_Bid - self.config_data.takeProfit
+        stopLossPrice = curr_Bid + self.config_data.stopLoss
+        try:
+            print(f'tp: {takeProfitPrice},  sl: {stopLossPrice}')
+            trade_result = self.client.create_order(
+                    symbol=pair,
+                    type='market',
+                    side='sell',
+                    amount=float(self.config_data.stakeAmount),
+                )
+            
+            stoploss_order_params = {
+                'stopLossPrice':stopLossPrice,
+                'triggerDirection':'above'
+            }
+            sl_trade_result = self.client.create_order(
+                    symbol=pair,
+                    type='limit',
+                    side='buy',
+                    amount=float(self.config_data.stakeAmount),
+                    params=stoploss_order_params
+                )
+
+            takeprofit_order_params = {
+                'takeProfitPrice':takeProfitPrice,
+                'triggerDirection':'below'
+            }
+            tp_trade_result = self.client.create_order(
+                    symbol=pair,
+                    type='limit',
+                    side='buy',
+                    amount=float(self.config_data.stakeAmount),
+                    params=stoploss_order_params
+                )
+        except Exception as raised_exception:
+            raise raised_exception
+        finally:
+            order_info = {
+                'pair':pair,
+                'time':last_ask_time,
+                'lastCandleTime':last_candle_structure['datetime'],
+                'price':curr_Bid,
+                'side':'sell',
+                'type':'open'
+            }
+            self.positiondatabase.AddPosition(orders_info=order_info)
+
+    def CloseBuyOrder(self, pair, quantity: float, price, last_price_time, last_candle_data):
+        try:
+            print("close amount: ",quantity)
+            
+        except Exception as raised_exception:
+            raise raised_exception
+        finally:
+            order_info = {
+                'pair':pair,
+                'time':last_price_time,
+                'lastCandleTime':last_candle_data['datetime'],
+                'price':price,
+                'side':'sell',
+                'type':'close'
+            }
+            self.positiondatabase.AddPosition(orders_info=order_info)
+
+    def CloseSellOrder(self, pair, quantity: float, price, last_price_time, last_candle_data):
+        try:
+            print("close amount: ",quantity)
+            result = self.client.create_order(
+                symbol=pair,
+                type='market',
+                side='buy',
+                amount=quantity,
+                params={
+                    'positionSide':'SHORT',
+                    'reduceOnly':True,
+                }
+            )
+        except Exception as raised_exception:
+            raise raised_exception
+        finally:
+            order_info = {
+                'pair':pair,
+                'time':last_price_time,
+                'lastCandleTime':last_candle_data['datetime'],
+                'price':price,
+                'side':'buy',
+                'type':'close'
+            }
+            self.positiondatabase.AddPosition(orders_info=order_info)
 
     def GetQuantityPrecised(self, price, stakeAmount):
         quantity = round(stakeAmount/price,self.pairQuantityPrecision)
@@ -73,39 +164,61 @@ class ordersManager:
 
 
 class OrdersDatabaseMgt:
-    def __init__(self, client):
+    def __init__(self, config:BotConfigClass):
         self.trades_dataframe_path = os.path.join(database_folder,"positions.csv")
-        self.trades_df: pd.DataFrame = None
-        self.client: Client = client
+        self.config     = config
+        self.client:ccxt.Exchange = self.config.exchange
+        self.currentSessionFile = os.path.join(database_folder, f"trades_data_{self.config.pairsInformation['id']}_time_{str(self.config.botStartTime)[:9]}.csv")
+        self.columns = None
+        self.tradesDf = None
         self.buyPosition = {}
         self.sellPosition = {}
         self.buyAmount = 0
         self.sellAmount = 0
+        self.InitiateOrderTable()
+    
+    def InitiateOrderTable(self):
+        self.columns = ['orderBarTime','realOrderTime','orderOpenPrice','pair', 'side','type']
+        self.tradesDf:pd.DataFrame = pd.DataFrame(columns=self.columns)
 
     def AddPosition(self, orders_info: dict):
-        columns_availabel = self.trades_df.columns
-        new_position = pd.DataFrame(columns=columns_availabel)
-        for label in orders_info.keys():
-            if label in columns_availabel:
-                new_position[label] = orders_info.get(label)
+        oCandleTime = datetime.datetime.fromtimestamp(orders_info['lastCandleTime']/1000)
+
+        ##check if last record is on same candle
+        last_record_time = -1
+        try:
+            last_record_time = self.tradesDf.iloc[-1].squeeze()['orderBarTime']
+        except:
+            pass
+
+        if oCandleTime==last_record_time:
+            return
         
-        self.trades_df = pd.concat([self.trades_df, new_position],axis=0).reset_index(drop=True)
-        
+        oRealTime = datetime.datetime.fromtimestamp(orders_info['time']/1000)
+        oOpenPrice = orders_info['price']
+        oPair   = orders_info['pair']
+        oSide   = orders_info['side']
+        oType   = orders_info['type']
+
+        list = [[oCandleTime, oRealTime, oOpenPrice, oPair, oSide, oType]]
+        newOrder = pd.DataFrame(list, columns=self.columns)
+        self.tradesDf = pd.concat([newOrder,self.tradesDf], axis=0).reset_index(drop=True)
+        self.tradesDf.to_csv(self.currentSessionFile,index=False)
+
     def GetPositions(self, pair:str):
-        mposition = {}
-        positions = self.client.futures_position_information(symbol=pair)
-        for position in positions:
-            if position['positionSide']=="SHORT":
-                self.sellPosition = position
-            elif position['positionSide']=="LONG":
-                self.buyPosition = position
-        self.buyAmount = float(self.buyPosition['positionAmt'])
-        self.sellAmount = float(self.sellPosition['positionAmt'])
+        if len(self.tradesDf)<=0:
+            return
+        positions = self.tradesDf.iloc[-1].squeeze()
+        if positions['type']=='open':
+            if positions['type']=='buy':
+                self.buyAmount = 100
+            elif positions['type']=='sell':
+                self.sellAmount = -100
+            else:
+                self.buyAmount = 0
+                self.sellAmount = 0
+        # self.buyAmount = float(self.buyPosition['positionAmt'])
+        # self.sellAmount = float(self.sellPosition['positionAmt'])
 
     def GetPositionsCount(self, type:str, is_open=True):
-        positionsdfcount = self.trades_df.loc[
-            (self.trades_df['side']==type.upper())
-            &(self.trades_df.status==('active' if is_open else 'closed'))
-        ].shape[0]
-        return positionsdfcount
-    
+        pass

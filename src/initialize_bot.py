@@ -4,6 +4,7 @@ import json
 import logging
 from src.timeframeManagement import TimeframeMgt
 import os
+import time
 
 logpath = os.path.abspath("logs/errors.log")
 
@@ -17,12 +18,22 @@ def get_config_file(file_path):
         return dict(new_json)
 
 ##GET EXCHANGE INFORMATION FOR VERIFICATIONS
-async def get_exchange_info(exchange_name: str, test_mode: True):
+async def get_exchange_info(exchange_name: str, apikey: str, apisecret: str, test_mode: True):
     try:
         exchange = getattr(ccxt, exchange_name)
-        exchange:ccxt.Exchange = exchange()
-        exchange.set_sandbox_mode(test_mode)
+        exchange:ccxt.Exchange = exchange({
+            'apiKey':apikey,
+            'secret':apisecret
+        })
+        exchange.set_sandbox_mode(enable=test_mode)
+        
         markets = exchange.load_markets()
+        
+        if not exchange.check_required_credentials():
+            logging.info(f"Credentials not complete: required are: {exchange.requiredCredentials}")
+        
+        # print(f"Account info: {exchange.fetch_accounts()}")
+        print("info: ",exchange.account())
         return (exchange, markets)
     except:
         logging.error("Exchange not available in ccxt list.")
@@ -31,6 +42,7 @@ async def get_exchange_info(exchange_name: str, test_mode: True):
 ##BOT CLASS FOR A SINGLE PAIR
 class BotConfigClass:
     def __init__(self, config_file_path) -> None:
+        self.botStartTime = time.time()
         self.configData    = get_config_file(config_file_path)
         self.exchange: ccxt.Exchange = None
         self.pairsInformation = None
@@ -42,15 +54,15 @@ class BotConfigClass:
         self.takeProfit = None
         self.stopLoss = None
         self.testnet  = bool(self.configData.get('test_net', True))
+        self.api_key    = str(self.configData.get('apiKey', ''))
+        self.api_secret = str(self.configData.get('apiSecret', ''))
         self.verify_configurations()
         self.TimeFrameClass = TimeframeMgt(self.timeframe, self.timeframes)
         self.stakeAmount = int(self.configData.get('stakeAmount', 100))
-        self.api_key    = str(self.configData.get('apiKey', ''))
-        self.api_secret = str(self.configData.get('apiSecret', ''))
         self.download_new_data = bool(self.configData.get('downloadNewData', False))
 
     async def get_market_data(self):
-        self.exchange, self.markets = await get_exchange_info(self.configData['exchange'],self.testnet)
+        self.exchange, self.markets = await get_exchange_info(self.configData['exchange'], self.api_key, self.api_secret,self.testnet)
         self.pairs = self.markets.keys()
         self.timeframes = self.exchange.timeframes.keys()
 
@@ -78,12 +90,14 @@ class BotConfigClass:
         
         ##setting other standard parameters
         self.pair   = self.pairsInformation['symbol']
+        last_askprice  = self.exchange.fetch_order_book(self.pair,5)['asks'][0][0]
+        dot_index = str(last_askprice).index('.')
         self.timeframe = self.configData['timeframe']
-        self.digits = self.pairsInformation['precision']['price']
+        self.digits = len(str(last_askprice)[dot_index+1:])
         self.points = 1/pow(10,self.digits)
         self.takeProfit = round(int(self.configData.get('takeProfit',100))*self.points, self.digits)
         self.stopLoss   = round(int(self.configData.get('stopLoss',100))*self.points, self.digits)
-                
+    
         logging.info("digits: {}".format(self.digits))
         logging.info("points: {}".format(self.points))
         logging.info("tp: {}".format(self.takeProfit))
