@@ -191,7 +191,7 @@ class OrdersDatabaseMgt:
         ##check if last record is on same candle
         last_record_time = -1
         try:
-            last_record_time = self.tradesDf.iloc[-1].squeeze()['orderBarTime']
+            last_record_time = self.tradesDf.iloc[0].squeeze()['orderBarTime']
         except:
             pass
 
