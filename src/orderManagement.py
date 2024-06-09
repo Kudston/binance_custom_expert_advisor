@@ -5,6 +5,8 @@ import os
 import datetime
 
 database_folder = os.path.abspath("trades_data")
+if not os.path.exists(database_folder):
+    os.makedirs(database_folder)
 
 class ordersManager:
     def __init__(self, config_data:BotConfigClass) -> None:
@@ -179,7 +181,9 @@ class OrdersDatabaseMgt:
     
     def InitiateOrderTable(self):
         self.columns = ['orderBarTime','realOrderTime','orderOpenPrice','pair', 'side','type']
-        self.tradesDf:pd.DataFrame = pd.DataFrame(columns=self.columns)
+        file_already_exist = os.path.exists(self.currentSessionFile)
+        self.tradesDf:pd.DataFrame = (pd.DataFrame(columns=self.columns) if not 
+                                      file_already_exist else pd.read_csv(self.currentSessionFile))
 
     def AddPosition(self, orders_info: dict):
         oCandleTime = datetime.datetime.fromtimestamp(orders_info['lastCandleTime']/1000)
@@ -207,6 +211,7 @@ class OrdersDatabaseMgt:
 
     def GetPositions(self, pair:str):
         if len(self.tradesDf)<=0:
+            print(self.tradesDf)
             return
         positions = self.tradesDf.iloc[-1].squeeze()
         if positions['type']=='open':

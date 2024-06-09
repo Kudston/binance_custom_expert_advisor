@@ -2,9 +2,9 @@
     "exchange":"bybit",
     "pair":"ETH/USDT:USDT",
     "timeframe":"1m",
-    "apiKey":"",
-    "apiSecret":"",
+    "apiKey":"mH69jxeotBLkecLt6F",
+    "apiSecret":"RbjyV5bOT3jZEdoDnRMxToOfHJ6svaNHoolK",
     "downloadNewData":true,
-    "test_net":true,
+    "test_net":false,
     "stakeAmount":100
 }
