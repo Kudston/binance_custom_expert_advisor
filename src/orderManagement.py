@@ -211,7 +211,6 @@ class OrdersDatabaseMgt:
 
     def GetPositions(self, pair:str):
         if len(self.tradesDf)<=0:
-            print(self.tradesDf)
             return
         positions = self.tradesDf.iloc[0].squeeze()
         
