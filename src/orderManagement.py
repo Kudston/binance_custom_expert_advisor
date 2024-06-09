@@ -5,6 +5,8 @@ import os
 import datetime
 
 database_folder = os.path.abspath("trades_data")
+if not os.path.exists(database_folder):
+    os.makedirs(database_folder)
 
 class ordersManager:
     def __init__(self, config_data:BotConfigClass) -> None:
@@ -209,6 +211,7 @@ class OrdersDatabaseMgt:
 
     def GetPositions(self, pair:str):
         if len(self.tradesDf)<=0:
+            print(self.tradesDf)
             return
         positions = self.tradesDf.iloc[0].squeeze()
         

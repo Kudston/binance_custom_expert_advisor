@@ -6,7 +6,17 @@ from src.timeframeManagement import TimeframeMgt
 import os
 import time
 
-logpath = os.path.abspath("logs/errors.log")
+logdir = os.path.abspath("logs")
+logpath = os.path.join(logdir, "errors.log")
+
+if not os.path.exists(logdir):
+    os.makedirs(logdir)
+
+try:
+    with open(logpath, 'w') as file:
+        pass
+except FileExistsError:
+    print('Log File already exists.')
 
 logging.basicConfig(filename=logpath, level=logging.DEBUG,
                     format='%(asctime)s:%(levelname)s:%(message)s')
