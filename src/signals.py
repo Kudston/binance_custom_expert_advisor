@@ -18,6 +18,10 @@ class Signals:
         self.data_mgt:DataManagement = datamgt
         self.configData:BotConfigClass = datamgt.configData
         self.order_mgt: ordersManager = ordersManager(self.configData)
+        
+        self.start_hour = self.configData.trade_start_time
+        self.end_hour = self.configData.trade_end_time
+
         #initialize dataframe
         self.data_mgt.InitializeDataFrame(self.configData.download_new_data)
         
@@ -36,8 +40,6 @@ class Signals:
 
     period = 20
     deviation = 2
-    start_hour = 15
-    end_hour = 23
     
     traded_last_bar = False
 
@@ -46,7 +48,6 @@ class Signals:
         #send positions using the symbol in pairsINformation dictionary
         try:
             self.CheckLastCandleSignal()
-
             if not self.traded_last_bar:
                 if ((self.last_candle_data['buy_signal']==1) and 
                     (self.best_ask>=self.last_candle_data['lower_band']) and
@@ -55,7 +56,8 @@ class Signals:
                     logging.info('placing buy order')
                     print('placing buy order')
                     self.traded_last_bar = True
-                    self.order_mgt.BuyOrder(self.configData.pairsInformation['id'], self.best_bid, self.last_price_time, self.last_candle_data)
+                    self.order_mgt.BuyOrder(self.configData.pairsInformation['id'], self.best_bid, 
+                                            self.last_price_time, self.last_candle_data)
 
                 elif ((self.last_candle_data['sell_signal']==1) and 
                       (self.best_bid<=self.last_candle_data['upper_band']) and
@@ -64,19 +66,20 @@ class Signals:
                     logging.info('placing sell order')
                     print('placing sell order')
                     self.traded_last_bar = True
-                    self.order_mgt.SellOrder(self.configData.pairsInformation['id'], self.best_ask, self.last_price_time, self.last_candle_data)
+                    self.order_mgt.SellOrder(self.configData.pairsInformation['id'], self.best_ask, 
+                                             self.last_price_time, self.last_candle_data)
 
             if  self.order_mgt.positiondatabase.buyAmount>0 and self.best_bid>=self.last_candle_data['ema']:
                 logging.info('closing buy order')
                 print('closing buy order')
-                self.order_mgt.CloseBuyOrder(self.configData.pairsInformation['id'], self.order_mgt.positiondatabase.buyAmount, 
+                self.order_mgt.CloseBuyOrder(self.configData.pairsInformation['id'], 0, 
                                              self.best_bid, self.last_price_time, self.last_candle_data)
 
             if self.order_mgt.positiondatabase.sellAmount<0 and self.best_ask<=self.last_candle_data['ema']:
                 logging.info('closing sell order')
                 print('closing sell order')
-                self.order_mgt.CloseSellOrder(self.configData.pairsInformation['id'], self.order_mgt.positiondatabase.sellAmount,self.best_bid,
-                                               self.last_price_time, self.last_candle_data)
+                self.order_mgt.CloseSellOrder(self.configData.pairsInformation['id'], 0,
+                                              self.best_bid, self.last_price_time, self.last_candle_data)
         except Exception as raised_exception:
             print(str(raised_exception))
 

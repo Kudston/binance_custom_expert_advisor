@@ -13,48 +13,65 @@ class ordersManager:
         self.config_data:BotConfigClass = config_data
         self.client: ccxt.Exchange = config_data.exchange
         self.positiondatabase = OrdersDatabaseMgt(config_data)
-        self.pairQuantityPrecision = self.config_data.pairsInformation['precision']['amount'] #this doesnt work with some exchange, use at own risk
+        self.pairQuantityPrecision = self.config_data.pairsInformation['limits']['amount']['min'] #this doesnt work with some exchange, use at own risk
+        pairdotindex = str(self.pairQuantityPrecision).index('.')
+        self.pairQuantityPrecision = len(str(self.pairQuantityPrecision)[pairdotindex+1:])
         self.openBuyPositionsIds = []
         self.openSellPositionsIds = []
         self.closedtrades = []
+
 
     def BuyOrder(self, pair: str, curr_Ask: float, last_bid_time, last_candle_structure):
 
         takeProfitPrice = curr_Ask + self.config_data.takeProfit
         stopLossPrice = curr_Ask - self.config_data.stopLoss
         
-        print(f'tp: {takeProfitPrice},  sl: {stopLossPrice}')
+        print(f'takeprofit: {takeProfitPrice},  stoploss: {stopLossPrice}')
         try:
             trade_result = self.client.create_order(
                     symbol=pair,
                     type='market',
                     side='buy',
-                    amount=float(self.config_data.stakeAmount)
+                    amount=float(self.config_data.stakeAmount),
+                    price=curr_Ask,
+                    params={
+                        'precision':self.pairQuantityPrecision
+                    }
                 )
-            
+
+            print('positionResponse: ',trade_result)
             stoploss_order_params = {
                 'stopLossPrice':stopLossPrice,
-                'triggerDirection':'below'
+                'triggerDirection':'below',
+                'precision':self.pairQuantityPrecision,
+                'reduceOnly':True,
+                'reason':'stopLoss'
             }
             sl_trade_result = self.client.create_order(
                     symbol=pair,
                     type='limit',
                     side='sell',
                     amount=float(self.config_data.stakeAmount),
+                    price = stopLossPrice,
                     params=stoploss_order_params
                 )
-
+            print('stoplossResponse: ',sl_trade_result)
             takeprofit_order_params = {
                 'takeProfitPrice':takeProfitPrice,
-                'triggerDirection':'above'
+                'triggerDirection':'above',
+                'precision':self.pairQuantityPrecision,
+                'reduceOnly':True,
+                'reason':'takeProfit'
             }
             tp_trade_result = self.client.create_order(
                     symbol=pair,
                     type='limit',
                     side='sell',
+                    price=takeProfitPrice,
                     amount=float(self.config_data.stakeAmount),
-                    params=stoploss_order_params
+                    params=takeprofit_order_params
                 )
+            print('takeProfitResponse: ',tp_trade_result)
         except Exception as raised_exception:
             raise raised_exception
         finally:
@@ -72,38 +89,54 @@ class ordersManager:
         # amount = self.GetQuantityPrecised(curr_Ask, self.config_data.stakeAmount)
         takeProfitPrice = curr_Bid - self.config_data.takeProfit
         stopLossPrice = curr_Bid + self.config_data.stopLoss
+        
+        print(f'takeprofit: {takeProfitPrice},  stoploss: {stopLossPrice}')
         try:
-            print(f'tp: {takeProfitPrice},  sl: {stopLossPrice}')
             trade_result = self.client.create_order(
                     symbol=pair,
                     type='market',
                     side='sell',
                     amount=float(self.config_data.stakeAmount),
+                    price=curr_Bid,
+                    params={
+                        'precision':self.pairQuantityPrecision
+                    }
                 )
-            
+
+            print('positionResponse: ',trade_result)
+            ##place stoploss
             stoploss_order_params = {
                 'stopLossPrice':stopLossPrice,
-                'triggerDirection':'above'
+                'triggerDirection':'below',
+                'precision':self.pairQuantityPrecision,
+                'reduceOnly':True,
+                'reason':'stopLoss'
             }
             sl_trade_result = self.client.create_order(
                     symbol=pair,
                     type='limit',
                     side='buy',
                     amount=float(self.config_data.stakeAmount),
+                    price = stopLossPrice,
                     params=stoploss_order_params
                 )
-
+            print('stoplossResponse: ',sl_trade_result)
             takeprofit_order_params = {
                 'takeProfitPrice':takeProfitPrice,
-                'triggerDirection':'below'
+                'triggerDirection':'above',
+                'precision':self.pairQuantityPrecision,
+                'reduceOnly':True,
+                'reason':'takeProfit'
             }
             tp_trade_result = self.client.create_order(
                     symbol=pair,
                     type='limit',
                     side='buy',
+                    price=takeProfitPrice,
                     amount=float(self.config_data.stakeAmount),
-                    params=stoploss_order_params
+                    params=takeprofit_order_params
                 )
+            print('takeProfitResponse: ',tp_trade_result)
         except Exception as raised_exception:
             raise raised_exception
         finally:
@@ -119,8 +152,22 @@ class ordersManager:
 
     def CloseBuyOrder(self, pair, quantity: float, price, last_price_time, last_candle_data):
         try:
-            print("close amount: ",quantity)
-            
+            takeprofit_order_params = {
+                'takeProfitPrice':price,
+                'triggerDirection':'above',
+                'precision':self.pairQuantityPrecision,
+                'reduceOnly':True,
+                'reason':'close'
+            }
+            close_buy_result = self.client.create_order(
+                    symbol=pair,
+                    type='market',
+                    side='sell',
+                    price=price,
+                    amount=quantity,
+                    params=takeprofit_order_params
+                )
+            print(close_buy_result)
         except Exception as raised_exception:
             raise raised_exception
         finally:
@@ -136,17 +183,22 @@ class ordersManager:
 
     def CloseSellOrder(self, pair, quantity: float, price, last_price_time, last_candle_data):
         try:
-            print("close amount: ",quantity)
-            result = self.client.create_order(
-                symbol=pair,
-                type='market',
-                side='buy',
-                amount=quantity,
-                params={
-                    'positionSide':'SHORT',
-                    'reduceOnly':True,
-                }
-            )
+            takeprofit_order_params = {
+                'takeProfitPrice':price,
+                'triggerDirection':'above',
+                'precision':self.pairQuantityPrecision,
+                'reduceOnly':True,
+                'reason':'close'
+            }
+            close_sell_result = self.client.create_order(
+                    symbol=pair,
+                    type='market',
+                    side='buy',
+                    price=price,
+                    amount=quantity,
+                    params=takeprofit_order_params
+                )
+            print(close_sell_result)
         except Exception as raised_exception:
             raise raised_exception
         finally:
@@ -212,15 +264,16 @@ class OrdersDatabaseMgt:
     def GetPositions(self, pair:str):
         if len(self.tradesDf)<=0:
             return
+        
         positions = self.tradesDf.iloc[0].squeeze()
         
         if positions['type']=='open':
             if positions['side']=='buy':
                 # print('found buy')
-                self.buyAmount = self.config.stakeAmount
+                self.buyAmount = positions['orderOpenPrice']
             elif positions['side']=='sell':
                 # print('found sell')
-                self.sellAmount = -self.config.stakeAmount
+                self.sellAmount = -positions['orderOpenPrice']
         else:
             self.buyAmount = 0
             self.sellAmount = 0

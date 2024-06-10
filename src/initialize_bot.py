@@ -3,6 +3,7 @@ import ccxt
 import json
 import logging
 from src.timeframeManagement import TimeframeMgt
+from src.exchangeMgt import CustomExchange
 import os
 import time
 
@@ -27,28 +28,6 @@ def get_config_file(file_path):
         new_json = json.load(conf_file)
         return dict(new_json)
 
-##GET EXCHANGE INFORMATION FOR VERIFICATIONS
-async def get_exchange_info(exchange_name: str, apikey: str, apisecret: str, test_mode: True):
-    try:
-        exchange = getattr(ccxt, exchange_name)
-        exchange:ccxt.Exchange = exchange({
-            'apiKey':apikey,
-            'secret':apisecret
-        })
-        exchange.set_sandbox_mode(enable=test_mode)
-        
-        markets = exchange.load_markets()
-        
-        if not exchange.check_required_credentials():
-            logging.info(f"Credentials not complete: required are: {exchange.requiredCredentials}")
-        
-        # print(f"Account info: {exchange.fetch_accounts()}")
-        print("info: ",exchange.account())
-        return (exchange, markets)
-    except:
-        logging.error("Exchange not available in ccxt list.")
-        raise Exception("Error getting exchange from ccxt.")
-
 ##BOT CLASS FOR A SINGLE PAIR
 class BotConfigClass:
     def __init__(self, config_file_path) -> None:
@@ -64,15 +43,19 @@ class BotConfigClass:
         self.takeProfit = None
         self.stopLoss = None
         self.testnet  = bool(self.configData.get('test_net', True))
+        self.demoacc  = bool(self.configData.get('is_demo', True))
         self.api_key    = str(self.configData.get('apiKey', ''))
         self.api_secret = str(self.configData.get('apiSecret', ''))
         self.verify_configurations()
         self.TimeFrameClass = TimeframeMgt(self.timeframe, self.timeframes)
         self.stakeAmount = int(self.configData.get('stakeAmount', 100))
         self.download_new_data = bool(self.configData.get('downloadNewData', False))
+        self.trade_start_time = int(self.configData.get('tradeStartTime',0))
+        self.trade_end_time   = int(self.configData.get('tradeEndTime', 23))
 
     async def get_market_data(self):
-        self.exchange, self.markets = await get_exchange_info(self.configData['exchange'], self.api_key, self.api_secret,self.testnet)
+        cexchange = CustomExchange(self.configData['exchange'])
+        self.exchange, self.markets = cexchange.get_exchange(self.api_key, self.api_secret, self.testnet, self.demoacc)
         self.pairs = self.markets.keys()
         self.timeframes = self.exchange.timeframes.keys()
 

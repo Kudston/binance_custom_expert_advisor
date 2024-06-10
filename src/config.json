@@ -2,9 +2,14 @@
     "exchange":"bybit",
     "pair":"ETH/USDT:USDT",
     "timeframe":"1m",
-    "apiKey":"mH69jxeotBLkecLt6F",
-    "apiSecret":"RbjyV5bOT3jZEdoDnRMxToOfHJ6svaNHoolK",
+    "apiKey":"",
+    "apiSecret":"",
     "downloadNewData":true,
     "test_net":false,
-    "stakeAmount":100
+    "is_demo":true,
+    "stakeAmount":100,
+    "takeProfit":1000,
+    "stopLoss":1000,
+    "tradeStartTime":0,
+    "tradeEndTime":23
 }
