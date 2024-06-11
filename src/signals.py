@@ -14,10 +14,11 @@ import warnings
 warnings.filterwarnings('ignore')
 
 class Signals:
-    def __init__(self, datamgt: DataManagement) -> None:
-        self.data_mgt:DataManagement = datamgt
-        self.configData:BotConfigClass = datamgt.configData
-        self.order_mgt: ordersManager = ordersManager(self.configData)
+    def __init__(self, pair, botconfig:BotConfigClass) -> None:
+        self.data_mgt:DataManagement = DataManagement(pair, botconfig)
+        self.configData:BotConfigClass = botconfig
+        self.order_mgt: ordersManager = ordersManager(pair, botconfig)
+        self.pair   = pair
         
         self.start_hour = self.configData.trade_start_time
         self.end_hour = self.configData.trade_end_time
@@ -44,7 +45,7 @@ class Signals:
     def ConfirmSignals(self):
         #send positions using the symbol in pairsINformation dictionary
         try:
-            self.CheckLastCandleSignal()    
+            self.CheckLastCandleSignal()
             if not self.traded_last_bar:
                 if ((self.last_candle_data['buy_signal']==1) and 
                     (self.best_ask>=self.last_candle_data['lower_band']) and
@@ -53,7 +54,7 @@ class Signals:
                     logging.info('placing buy order')
                     print('placing buy order')
                     self.traded_last_bar = True
-                    self.order_mgt.BuyOrder(self.configData.pairsInformation['id'], self.best_bid, 
+                    self.order_mgt.BuyOrder(self.configData.pairsInformation[self.pair]['id'],self.pair, self.best_bid, 
                                             self.last_price_time, self.last_candle_data)
 
                 elif ((self.last_candle_data['sell_signal']==1) and 
@@ -63,19 +64,19 @@ class Signals:
                     logging.info('placing sell order')
                     print('placing sell order')
                     self.traded_last_bar = True
-                    self.order_mgt.SellOrder(self.configData.pairsInformation['id'], self.best_ask, 
+                    self.order_mgt.SellOrder(self.configData.pairsInformation[self.pair]['id'], self.pair, self.best_ask, 
                                              self.last_price_time, self.last_candle_data)
 
             if  self.order_mgt.positiondatabase.buyAmount>0 and self.best_bid>=self.last_candle_data['ema']:
                 logging.info('closing buy order')
                 print('closing buy order')
-                self.order_mgt.CloseBuyOrder(self.configData.pairsInformation['id'], 0, 
+                self.order_mgt.CloseBuyOrder(self.configData.pairsInformation[self.pair]['id'], 0, 
                                              self.best_bid, self.last_price_time, self.last_candle_data)
 
             if self.order_mgt.positiondatabase.sellAmount<0 and self.best_ask<=self.last_candle_data['ema']:
                 logging.info('closing sell order')
                 print('closing sell order')
-                self.order_mgt.CloseSellOrder(self.configData.pairsInformation['id'], 0,
+                self.order_mgt.CloseSellOrder(self.configData.pairsInformation[self.pair]['id'], 0,
                                               self.best_bid, self.last_price_time, self.last_candle_data)
         except Exception as raised_exception:
             print(str(raised_exception))
@@ -90,7 +91,8 @@ class Signals:
 
                 #populate signals modifies self.df and adds signals to it
                 self.PopulateSignals(self.df)
-                print("buy positions amount: ",self.order_mgt.positiondatabase.buyAmount)
+                print(f"information for pair: {self.pair}")
+                print("buy positions amount:",self.order_mgt.positiondatabase.buyAmount)
                 print("sell positions amount: ",self.order_mgt.positiondatabase.sellAmount)
                 print('last bar ema: ',self.last_candle_data['ema'])
                 print('last bar upBand: ',self.last_candle_data['upper_band'])
@@ -98,8 +100,8 @@ class Signals:
                 print('last close: ', self.last_candle_data['close'])
                 
             #check for positions open
-            self.order_mgt.positiondatabase.GetPositions(self.configData.pairsInformation['id'])
-            order_book = self.configData.exchange.fetch_order_book(self.configData.pair, 5)
+            self.order_mgt.positiondatabase.GetPositions(self.configData.pairsInformation[self.pair]['id'])
+            order_book = self.configData.exchange.fetch_order_book(self.pair, 5)
             self.best_bid = order_book['bids'][0][0]
             self.best_ask = order_book['asks'][0][0]
             self.last_price_time = int(order_book['timestamp'])
@@ -110,7 +112,7 @@ class Signals:
     def PopulateIndicators(self):
         self.df = self.data_mgt.df.copy()
         
-        self.df['midprice'] = round((self.df['high']+self.df['low'])/2, self.configData.digits)
+        self.df['midprice'] = round((self.df['high']+self.df['low'])/2, self.configData.digits[self.pair])
         
         boll = BollingerBands(self.df['close'], self.configData.bollinger_period, 
                               self.configData.bollinger_deviation)

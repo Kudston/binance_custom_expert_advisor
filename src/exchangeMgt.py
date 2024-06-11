@@ -112,8 +112,8 @@ class BybitExchangeCustoms:
         orderLinkId =uuid.uuid4().hex
         positionIdx = 1 if side=='buy' else 2
 
-        precision = int(params.get('precision',2))
-        quantity = round(float(amount)/float(price),precision)
+        precision = float(params.get('precision',2))
+        quantity = int((float(amount)/float(price))/precision)*precision
 
         reduceOnly = bool(params.get('reduceOnly',False))
         if reduceOnly:

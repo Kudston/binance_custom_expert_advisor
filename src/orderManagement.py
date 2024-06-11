@@ -9,22 +9,23 @@ if not os.path.exists(database_folder):
     os.makedirs(database_folder)
 
 class ordersManager:
-    def __init__(self, config_data:BotConfigClass) -> None:
+    def __init__(self, pair, config_data:BotConfigClass) -> None:
         self.config_data:BotConfigClass = config_data
         self.client: ccxt.Exchange = config_data.exchange
-        self.positiondatabase = OrdersDatabaseMgt(config_data)
-        self.pairQuantityPrecision = self.config_data.pairsInformation['limits']['amount']['min'] #this doesnt work with some exchange, use at own risk
-        pairdotindex = str(self.pairQuantityPrecision).index('.')
-        self.pairQuantityPrecision = len(str(self.pairQuantityPrecision)[pairdotindex+1:])
+        self.pair = pair
+        self.positiondatabase = OrdersDatabaseMgt(config_data, pair)
+        self.pairQuantityPrecision = self.config_data.pairsInformation[pair]['limits']['amount']['min']
         self.openBuyPositionsIds = []
         self.openSellPositionsIds = []
         self.closedtrades = []
 
 
-    def BuyOrder(self, pair: str, curr_Ask: float, last_bid_time, last_candle_structure):
+    def BuyOrder(self, pair: str, pairFutureName: str, curr_Ask: float, last_bid_time, last_candle_structure):
 
-        takeProfitPrice = curr_Ask + self.config_data.takeProfit
-        stopLossPrice = curr_Ask - self.config_data.stopLoss
+        takeProfitPrice = round(curr_Ask + self.config_data.takeProfit[pairFutureName], 
+                                self.config_data.digits[pairFutureName])
+        stopLossPrice = round(curr_Ask - self.config_data.stopLoss[pairFutureName],
+                              self.config_data.digits[pairFutureName])
         #save trade informations if successful
         trade_result = None
         sl_trade_result = None
@@ -89,9 +90,11 @@ class ordersManager:
             }
             self.positiondatabase.AddPosition(orders_info=order_info)
 
-    def SellOrder(self, pair: str, curr_Bid: float, last_ask_time, last_candle_structure):
-        takeProfitPrice = curr_Bid - self.config_data.takeProfit
-        stopLossPrice = curr_Bid + self.config_data.stopLoss
+    def SellOrder(self, pair: str, pairFutureName: str, curr_Bid: float, last_ask_time, last_candle_structure):
+        takeProfitPrice = round(curr_Bid - self.config_data.takeProfit[pairFutureName], 
+                                self.config_data.digits[pairFutureName])
+        stopLossPrice = round(curr_Bid + self.config_data.stopLoss[pairFutureName],
+                              self.config_data.digits[pairFutureName])
         
         print(f'takeprofit: {takeProfitPrice},  stoploss: {stopLossPrice}')
         try:
@@ -226,11 +229,10 @@ class ordersManager:
 
 
 class OrdersDatabaseMgt:
-    def __init__(self, config:BotConfigClass):
-        self.trades_dataframe_path = os.path.join(database_folder,"positions.csv")
+    def __init__(self, config:BotConfigClass, pair: str):
         self.config     = config
         self.client:ccxt.Exchange = self.config.exchange
-        self.currentSessionFile = os.path.join(database_folder, f"trades_data_{self.config.pairsInformation['id']}.csv")
+        self.currentSessionFile = os.path.join(database_folder, f"trades_data_{self.config.pairsInformation[pair]['id']}_{self.config.timeframe}.csv")
         self.columns = None
         self.tradesDf = None
         self.buyPosition = {}

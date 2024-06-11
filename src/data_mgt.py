@@ -9,13 +9,18 @@ import datetime
 data_path_folder = os.path.join(".",'data')
 a = os.path.abspath(data_path_folder)
 
+if not os.path.exists(data_path_folder):
+    os.makedirs(data_path_folder)
+
 def GenerateDataFileName(pair: str, timeframe: str):
     return os.path.join(data_path_folder,"DataFrame_for_{}_timeframe_{}.csv".format(pair, timeframe))
 
 class DataManagement:
-    def __init__(self, bot_config=None, initial_counts: int= 5000)->None:
+    def __init__(self, pair, bot_config=None, initial_counts: int= 5000)->None:
         self.configData: BotConfigClass = bot_config
-        self.data_path = GenerateDataFileName(bot_config.pairsInformation['id'], bot_config.timeframe)
+        self.pair = pair
+        self.pairs_info = self.configData.pairsInformation[pair]
+        self.data_path = GenerateDataFileName(self.pairs_info['id'], bot_config.timeframe)
         self.initial_data_counts = initial_counts
         self.df: pd.DataFrame = None
         
@@ -26,13 +31,10 @@ class DataManagement:
 
     def InitializeDataFrame(self, download_new: bool):
         try:
-            if download_new:
-                if not os.path.exists(data_path_folder):
-                   os.mkdir(data_path_folder)
-                
+            if download_new:                
                 current_time = self.configData.exchange.fetch_time()
                 time.sleep(self.configData.exchange.rateLimit / 1000)
-                price_data = self.configData.exchange.fetch_ohlcv(self.configData.pair, self.configData.timeframe, 
+                price_data = self.configData.exchange.fetch_ohlcv(self.pair, self.configData.timeframe, 
                                                                   current_time-(self.timeFrameSeconds*self.initial_data_counts*1000),
                                                                   self.initial_data_counts)
                 
@@ -54,7 +56,7 @@ class DataManagement:
     def GetNewData(self):
         last_data_time = self.df.iloc[-1].squeeze()['datetime']
 
-        price_data = self.configData.exchange.fetch_ohlcv(self.configData.pair, self.configData.timeframe,
+        price_data = self.configData.exchange.fetch_ohlcv(self.pair, self.configData.timeframe,
                                                           (last_data_time/1000+self.timeFrameSeconds)*1000, self.initial_data_counts)
         new_df = pd.DataFrame(price_data, columns=self.columns)
 

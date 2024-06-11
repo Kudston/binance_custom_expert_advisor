@@ -8,16 +8,20 @@ import os
 import asyncio
 
 config_path = os.path.abspath('config.json')
-throttle_seconds = 2
+throttle_seconds = 4
 
 botconfig = BotConfigClass(config_path)
-datamgt = DataManagement(botconfig)
-signalsMgt = Signals(datamgt)
+pairs_ = botconfig.tradable_pairs
+signalsMgt_objects = []
 
-async def main(signal: Signals):
+for pair in pairs_:
+    signalsMgt_objects.append(Signals(pair, botconfig))
+
+async def main(signals: list[Signals]):
     while True:
-        signal.ConfirmSignals()
+        for signal in signals:
+            signal.ConfirmSignals()
         time.sleep(throttle_seconds)
 
 if __name__=="__main__":
-    asyncio.run(main(signalsMgt))
+    asyncio.run(main(signalsMgt_objects))

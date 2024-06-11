@@ -1,6 +1,13 @@
 {
     "exchange":"bybit",
-    "pair":"BTC/USDT:USDT",
+    "pairs":[
+        "XRP/USDT:USDT",
+        "BTC/USDT:USDT",
+        "SOL/USDT:USDT",
+        "ETH/USDT:USDT",
+        "SAND/USDT:USDT",
+        "DOGE/USDT:USDT"
+    ],
     "timeframe":"1m",
     "apiKey":"",
     "apiSecret":"",
