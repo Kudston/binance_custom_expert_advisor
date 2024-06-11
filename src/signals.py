@@ -111,14 +111,18 @@ class Signals:
         self.df = self.data_mgt.df.copy()
         
         self.df['midprice'] = round((self.df['high']+self.df['low'])/2, self.configData.digits)
+        
         boll = BollingerBands(self.df['close'], self.configData.bollinger_period, 
                               self.configData.bollinger_deviation)
+
         self.df['upper_band'] = boll.bollinger_hband()
         self.df['lower_band'] = boll.bollinger_lband()
+
         ema = EMAIndicator(self.df['close'], self.configData.ema_period)
         self.df['ema'] = ema.ema_indicator()
+        
         self.df['atr'] = (AverageTrueRange(self.df['high'], self.df['low'], self.df['close'], 
-                                           self.configData.api_secret).average_true_range())
+                                           self.configData.atr_period).average_true_range())
         self.df['hour'] = self.df['datetime'].apply(lambda x: datetime.datetime.fromtimestamp(x / 1000).hour)
         
 
