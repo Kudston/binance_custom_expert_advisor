@@ -1,9 +1,9 @@
 {
     "exchange":"bybit",
-    "pair":"ETH/USDT:USDT",
+    "pair":"BTC/USDT:USDT",
     "timeframe":"1m",
-    "apiKey":"",
-    "apiSecret":"",
+    "apiKey":"SsRPUw7P1FOmLOLQRS",
+    "apiSecret":"S0BKGIpvwfGqdh2RMckzmQvI053yK3qrblPJ",
     "downloadNewData":true,
     "test_net":false,
     "is_demo":true,
@@ -11,5 +11,9 @@
     "takeProfit":1000,
     "stopLoss":1000,
     "tradeStartTime":0,
-    "tradeEndTime":23
+    "tradeEndTime":23,
+    "bollingerPeriod":20,
+    "bollingerDeviation":2,
+    "emaPeriod":20,
+    "atrPeriod":14
 }

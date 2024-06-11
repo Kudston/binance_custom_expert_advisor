@@ -5,6 +5,7 @@ import hmac
 import uuid
 import enum
 import ccxt
+import json
 
 class CustomExchange:
     def __init__(self, exchange_name) -> None:
@@ -28,6 +29,7 @@ class CustomExchange:
                 if demoaccount:
                     self.exchange:ccxt.bybit = ccxt.bybit()
                     self.exchange.create_order = bybitCustom.CreateOrder
+                    self.exchange.cancel_all_orders = bybitCustom.CancelAllOrder
             else:
                 self.exchange.check_required_credentials()
             markets = self.exchange.load_markets()
@@ -63,6 +65,7 @@ class BybitExchangeCustoms:
 
         ##using v5 api
         self.order_create_endpoint = "/v5/order/create"
+        self.order_cancel_all_endpoint = "/v5/order/cancel-all"
         self.GetBalance()
 
     def SignParameters(self, payload):
@@ -149,5 +152,18 @@ class BybitExchangeCustoms:
         urlparams += "}"
 
         response = self.HTTP_Request(self.order_create_endpoint,'POST',urlparams,"Create")
+        response = json.loads(response)
+        
         return (response)
     
+    def CancelAllOrder(
+            self,
+            symbol
+    ):
+        urlparams = "{"
+        urlparams += '"category":"linear",'
+        urlparams += '"symbol" : "'+symbol+'"'
+        urlparams += "}"
+
+        response = self.HTTP_Request(self.order_cancel_all_endpoint, 'POST', urlparams, 'cancel')
+        return (response)

@@ -52,6 +52,10 @@ class BotConfigClass:
         self.download_new_data = bool(self.configData.get('downloadNewData', False))
         self.trade_start_time = int(self.configData.get('tradeStartTime',0))
         self.trade_end_time   = int(self.configData.get('tradeEndTime', 23))
+        self.bollinger_period = int(self.configData.get('bollingerPeriod', 20))
+        self.bollinger_deviation = int(self.configData.get('bollingerDeviation',2))
+        self.ema_period     = int(self.configData.get('emaPeriod', 20))
+        self.atr_period     = int(self.configData.get('atrPeriod', 14))
 
     async def get_market_data(self):
         cexchange = CustomExchange(self.configData['exchange'])

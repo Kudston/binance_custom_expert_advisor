@@ -25,7 +25,11 @@ class ordersManager:
 
         takeProfitPrice = curr_Ask + self.config_data.takeProfit
         stopLossPrice = curr_Ask - self.config_data.stopLoss
-        
+        #save trade informations if successful
+        trade_result = None
+        sl_trade_result = None
+        tp_trade_result = None
+
         print(f'takeprofit: {takeProfitPrice},  stoploss: {stopLossPrice}')
         try:
             trade_result = self.client.create_order(
@@ -86,7 +90,6 @@ class ordersManager:
             self.positiondatabase.AddPosition(orders_info=order_info)
 
     def SellOrder(self, pair: str, curr_Bid: float, last_ask_time, last_candle_structure):
-        # amount = self.GetQuantityPrecised(curr_Ask, self.config_data.stakeAmount)
         takeProfitPrice = curr_Bid - self.config_data.takeProfit
         stopLossPrice = curr_Bid + self.config_data.stopLoss
         
@@ -102,7 +105,6 @@ class ordersManager:
                         'precision':self.pairQuantityPrecision
                     }
                 )
-
             print('positionResponse: ',trade_result)
             ##place stoploss
             stoploss_order_params = {
@@ -168,6 +170,9 @@ class ordersManager:
                     params=takeprofit_order_params
                 )
             print(close_buy_result)
+            #close any open orders
+            result = self.client.cancel_all_orders(symbol=pair)
+            print('order cancel result: ',result)
         except Exception as raised_exception:
             raise raised_exception
         finally:
@@ -199,6 +204,9 @@ class ordersManager:
                     params=takeprofit_order_params
                 )
             print(close_sell_result)
+            #close any open order
+            result = self.client.cancel_all_orders(symbol=pair)
+            print("order cancel result: ",result)
         except Exception as raised_exception:
             raise raised_exception
         finally:
@@ -269,10 +277,8 @@ class OrdersDatabaseMgt:
         
         if positions['type']=='open':
             if positions['side']=='buy':
-                # print('found buy')
                 self.buyAmount = positions['orderOpenPrice']
             elif positions['side']=='sell':
-                # print('found sell')
                 self.sellAmount = -positions['orderOpenPrice']
         else:
             self.buyAmount = 0
