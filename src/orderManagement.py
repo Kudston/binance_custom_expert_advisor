@@ -77,6 +77,7 @@ class ordersManager:
                     params=takeprofit_order_params
                 )
             print('takeProfitResponse: ',tp_trade_result)
+
         except Exception as raised_exception:
             raise raised_exception
         finally:

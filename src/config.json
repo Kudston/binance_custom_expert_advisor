@@ -17,10 +17,12 @@
     "stakeAmount":100,
     "takeProfit":1000,
     "stopLoss":1000,
-    "tradeStartTime":0,
-    "tradeEndTime":23,
+    "tradeStartHour":19,
+    "tradingHours":10,
+    "maxSpread":100,
     "bollingerPeriod":20,
     "bollingerDeviation":2,
     "emaPeriod":20,
-    "atrPeriod":14
+    "atrPeriod":14,
+    "atrPurchaseValue":1.5
 }

@@ -41,6 +41,8 @@ class BotConfigClass:
         self.points = {}
         self.takeProfit = {}
         self.stopLoss = {}
+        self.atr_purchase_value = {}
+        self.max_spread_values = {}
         self.tradable_pairs = []
         self.market_pairs = []
         self.testnet  = bool(self.configData.get('test_net', True))
@@ -51,8 +53,8 @@ class BotConfigClass:
         self.TimeFrameClass = TimeframeMgt(self.timeframe, self.timeframes)
         self.stakeAmount = int(self.configData.get('stakeAmount', 100))
         self.download_new_data = bool(self.configData.get('downloadNewData', False))
-        self.trade_start_time = int(self.configData.get('tradeStartTime',0))
-        self.trade_end_time   = int(self.configData.get('tradeEndTime', 23))
+        self.trade_start_time = int(self.configData.get('tradeStartHour',0))
+        self.trading_hour   = int(self.configData.get('tradingHours', 23))
         self.bollinger_period = int(self.configData.get('bollingerPeriod', 20))
         self.bollinger_deviation = int(self.configData.get('bollingerDeviation',2))
         self.ema_period     = int(self.configData.get('emaPeriod', 20))
@@ -97,6 +99,8 @@ class BotConfigClass:
             self.points[pair] = 1/pow(10,self.digits[pair])
             self.takeProfit[pair] = round(int(self.configData.get('takeProfit',100))*self.points[pair], self.digits[pair])
             self.stopLoss[pair]   = round(int(self.configData.get('stopLoss',100))*self.points[pair], self.digits[pair])
+            self.atr_purchase_value[pair] = self.configData.get('atrPurchaseValue', 15)*self.points[pair]
+            self.max_spread_values[pair] = self.configData.get('spread',100)*self.points[pair]
 
         self.timeframe = self.configData['timeframe']
 

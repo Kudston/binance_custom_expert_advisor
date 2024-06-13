@@ -21,7 +21,18 @@ class Signals:
         self.pair   = pair
         
         self.start_hour = self.configData.trade_start_time
-        self.end_hour = self.configData.trade_end_time
+        todays_date = datetime.datetime.now(tz=datetime.timezone.utc)
+
+        self.trade_start_time = None
+        
+        self.trade_end_time = None
+        
+        ##set in milliseconds the trade start time
+        self.trade_start_milsecs = 0
+        self.trade_end_milsecs = 0
+        self.SetTradingTime()
+
+        print(f"trade start time: {self.trade_start_time}\ntrade endtime: {self.trade_end_time}")
 
         #initialize dataframe
         self.data_mgt.InitializeDataFrame(self.configData.download_new_data)
@@ -42,6 +53,7 @@ class Signals:
     traded_last_bar = False
 
     
+    
     def ConfirmSignals(self):
         #send positions using the symbol in pairsINformation dictionary
         try:
@@ -49,7 +61,8 @@ class Signals:
             if not self.traded_last_bar:
                 if ((self.last_candle_data['buy_signal']==1) and 
                     (self.best_ask>=self.last_candle_data['lower_band']) and
-                    (self.order_mgt.positiondatabase.buyAmount==0)
+                    (self.order_mgt.positiondatabase.buyAmount==0) and
+                    (self.best_ask-self.best_bid<=self.configData.max_spread_values[self.pair])
                     ):
                     logging.info('placing buy order')
                     print('placing buy order')
@@ -59,7 +72,8 @@ class Signals:
 
                 elif ((self.last_candle_data['sell_signal']==1) and 
                       (self.best_bid<=self.last_candle_data['upper_band']) and
-                      (self.order_mgt.positiondatabase.sellAmount==0)
+                      (self.order_mgt.positiondatabase.sellAmount==0)and
+                      (self.best_ask-self.best_bid<=self.configData.max_spread_values[self.pair])
                       ):
                     logging.info('placing sell order')
                     print('placing sell order')
@@ -78,11 +92,15 @@ class Signals:
                 print('closing sell order')
                 self.order_mgt.CloseSellOrder(self.configData.pairsInformation[self.pair]['id'], 0,
                                               self.best_bid, self.last_price_time, self.last_candle_data)
+                
+            ##check if we past trading time and set a new trading time for the current day
+            if (self.last_price_time) > self.trade_end_milsecs:
+                self.SetTradingTime()
+
         except Exception as raised_exception:
             print(str(raised_exception))
 
-    def CheckLastCandleSignal(self, forceUpdate=False):
-        
+    def CheckLastCandleSignal(self, forceUpdate=False):        
         try:
             if self.data_mgt.UpdateData() or forceUpdate:
                 self.traded_last_bar = False
@@ -132,17 +150,31 @@ class Signals:
         dataframe.loc[(
             (dataframe.close<dataframe.lower_band)
             &(dataframe.close<dataframe.ema)
-            &(dataframe.hour>=self.start_hour)
-            &(dataframe.hour<=self.end_hour)
+            &(dataframe.datetime>=self.trade_start_milsecs)
+            &(dataframe.datetime<=self.trade_end_milsecs)
+            &(dataframe.atr>=self.configData.atr_purchase_value[self.pair])
             &(dataframe.volume>0)),
         'buy_signal'] = 1
 
         dataframe.loc[(
             (dataframe.close>dataframe.upper_band)
             &(dataframe.close>dataframe.ema)
-            &(dataframe.hour>=self.start_hour)
-            &(dataframe.hour<=self.end_hour)
+            &(dataframe.datetime>=self.trade_start_milsecs)
+            &(dataframe.datetime<=self.trade_end_milsecs)
+            &(dataframe.atr>=self.configData.atr_purchase_value[self.pair])
             &(dataframe.volume>0)),
         'sell_signal'] = 1
-
+        
         self.last_candle_data = dataframe.iloc[-1].squeeze()
+
+    def SetTradingTime(self):
+        todays_date = datetime.datetime.now(tz=datetime.timezone.utc)
+        self.trade_start_time = (datetime.datetime(todays_date.year, todays_date.month,
+                                            todays_date.day, self.start_hour))
+
+        self.trade_end_time = (self.trade_start_time +
+                        datetime.timedelta(hours=self.configData.trading_hour))
+
+        ##set in milliseconds the trade start time
+        self.trade_start_milsecs = self.trade_start_time.timestamp()*1000
+        self.trade_end_milsecs = self.trade_end_time.timestamp()*1000
