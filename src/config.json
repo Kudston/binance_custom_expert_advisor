@@ -9,20 +9,28 @@
         "DOGE/USDT:USDT"
     ],
     "timeframe":"1m",
-    "apiKey":"",
-    "apiSecret":"",
+    "apiKey":"SsRPUw7P1FOmLOLQRS",
+    "apiSecret":"S0BKGIpvwfGqdh2RMckzmQvI053yK3qrblPJ",
     "downloadNewData":true,
     "test_net":false,
     "is_demo":true,
     "stakeAmount":100,
-    "takeProfit":1000,
-    "stopLoss":1000,
+    "takeProfit":[
+        100
+    ],
+    "stopLoss":[
+        100
+    ],
     "tradeStartHour":19,
     "tradingHours":10,
-    "maxSpread":100,
+    "maxSpread":[
+        100
+    ],
     "bollingerPeriod":20,
     "bollingerDeviation":2,
     "emaPeriod":20,
     "atrPeriod":14,
-    "atrPurchaseValue":1.5
+    "atrPurchaseValue":[
+        1.5
+    ]
 }

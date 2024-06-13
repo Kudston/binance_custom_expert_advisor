@@ -92,19 +92,31 @@ class BotConfigClass:
             raise Exception("Cannot fetch ohlcv data because exchange does not support it.")
         
         ##setting other standard parameters
-        for pair in self.tradable_pairs:
+        for index, pair in enumerate(self.tradable_pairs):
             last_askprice  = self.exchange.fetch_order_book(pair,5)['asks'][0][0]
             dot_index = str(last_askprice).index('.')
             self.digits[pair] = len(str(last_askprice)[dot_index+1:])
             self.points[pair] = 1/pow(10,self.digits[pair])
-            self.takeProfit[pair] = round(int(self.configData.get('takeProfit',100))*self.points[pair], self.digits[pair])
-            self.stopLoss[pair]   = round(int(self.configData.get('stopLoss',100))*self.points[pair], self.digits[pair])
-            self.atr_purchase_value[pair] = self.configData.get('atrPurchaseValue', 15)*self.points[pair]
-            self.max_spread_values[pair] = self.configData.get('spread',100)*self.points[pair]
+            self.takeProfit[pair] = round(int(self.ExtractFeature('takeProfit', index, [100]))*self.points[pair], self.digits[pair])
+            self.stopLoss[pair]   = round(int(self.ExtractFeature('stopLoss', index, [100]))*self.points[pair], self.digits[pair])
+            self.atr_purchase_value[pair] = int(self.ExtractFeature('atrPurchaseValue',index, [15]))*self.points[pair]
+            self.max_spread_values[pair] = int(self.ExtractFeature('spread', index, [100]))*self.points[pair]
 
         self.timeframe = self.configData['timeframe']
+        print("tp: ",self.takeProfit)
+        print("sl:",self.stopLoss)
+        print("atr_purch: ", self.atr_purchase_value)
+        print("max spread: ", self.max_spread_values)
 
         logging.info("digits: {}".format(self.digits))
         logging.info("points: {}".format(self.points))
         logging.info("tp: {}".format(self.takeProfit))
         logging.info("sl: {}".format(self.stopLoss))
+
+    def ExtractFeature(self, feature_name: str, index_: int, default=[]):
+        try:
+            value = self.configData.get(feature_name, default)[index_]
+            return value
+        except:
+            value = self.configData.get(feature_name, default)[0]
+            return value
