@@ -39,7 +39,6 @@ class DataManagement:
                                                                   self.initial_data_counts)
                 
                 self.df = pd.DataFrame(price_data, columns=self.columns)
-                print(self.df.shape)
                 self.df = self.df.iloc[:-1,:]
                 self.df.to_csv(self.data_path,index=False)
             else:

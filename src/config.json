@@ -16,10 +16,12 @@
     "is_demo":true,
     "stakeAmount":100,
     "takeProfit":[
-        100
+        100,
+        1000
     ],
     "stopLoss":[
-        100
+        100,
+        1000
     ],
     "tradeStartHour":19,
     "tradingHours":10,
@@ -31,6 +33,11 @@
     "emaPeriod":20,
     "atrPeriod":14,
     "atrPurchaseValue":[
-        1.5
+        20,
+        4000,
+        150,
+        200,
+        3,
+        120
     ]
 }
