@@ -240,6 +240,9 @@ class OrdersDatabaseMgt:
         self.sellPosition = {}
         self.buyAmount = 0
         self.sellAmount = 0
+        self.last_trade_recorded = None
+        self.close_remnant_orders = False
+        self.remnant_order_type = 'None'
         self.InitiateOrderTable()
     
     def InitiateOrderTable(self):
@@ -276,16 +279,22 @@ class OrdersDatabaseMgt:
         if len(self.tradesDf)<=0:
             return
         
-        positions = self.tradesDf.iloc[0].squeeze()
-        
-        if positions['type']=='open':
-            if positions['side']=='buy':
-                self.buyAmount = positions['orderOpenPrice']
-            elif positions['side']=='sell':
-                self.sellAmount = -positions['orderOpenPrice']
-        else:
-            self.buyAmount = 0
-            self.sellAmount = 0
+        trades = self.config.exchange.fetch_my_trades(pair)
 
-    def GetPositionsCount(self, type:str, is_open=True):
-        pass
+        for trade in trades['info']:
+            if trade['positionIdx']==1:
+                self.buyAmount =  float(trade['size'])
+
+            elif trade['positionIdx']==2:
+                self.sellAmount = float(trade['size'])
+
+        self.last_trade_recorded = self.tradesDf.iloc[0].squeeze()
+        if self.last_trade_recorded['type']=='open':
+            if self.buyAmount==0 and self.sellAmount==0:
+                if self.last_trade_recorded['side']=='buy':
+                    self.close_remnant_orders = True
+                    self.remnant_order_type = 0
+                
+                elif self.last_trade_recorded['side']=='sell':
+                    self.close_remnant_orders = True
+                    self.remnant_order_type = 1

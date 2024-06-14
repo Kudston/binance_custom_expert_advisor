@@ -23,8 +23,8 @@
         100,
         1000
     ],
-    "tradeStartHour":19,
-    "tradingHours":10,
+    "tradeStartHour":1,
+    "tradingHours":22,
     "maxSpread":[
         100
     ],

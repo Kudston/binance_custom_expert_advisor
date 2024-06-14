@@ -11,3 +11,8 @@ Steps to using file
 Notes:
     - the tp values can be set for each symbol by specifying a list (e.g=>[100, 200, 300]) if the list does not cover the number of pairs in the pairs list, the first value is used for other pairs.
     "" Same thing also applies to atrPurchaseValue and maxSpread
+
+    ---very important note
+    - currently working with bybit exchange api
+    - your specified pairs has to be in hedge mode
+    - only for trading futures 

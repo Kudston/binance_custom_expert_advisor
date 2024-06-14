@@ -30,6 +30,7 @@ class CustomExchange:
                     self.exchange:ccxt.bybit = ccxt.bybit()
                     self.exchange.create_order = bybitCustom.CreateOrder
                     self.exchange.cancel_all_orders = bybitCustom.CancelAllOrder
+                    self.exchange.fetch_my_trades = bybitCustom.FetchMyTrades
             else:
                 self.exchange.check_required_credentials()
             markets = self.exchange.load_markets()
@@ -66,22 +67,11 @@ class BybitExchangeCustoms:
         ##using v5 api
         self.order_create_endpoint = "/v5/order/create"
         self.order_cancel_all_endpoint = "/v5/order/cancel-all"
+        self.trades_get_url  = "/v5/position/list"
+
         self.GetBalance()
-
-    def SignParameters(self, payload):
-        param_str= str(self.time_stamp) + self.api_key + self.recv_window + payload
-        hash = hmac.new(bytes(self.api_secret, "utf-8"), param_str.encode("utf-8"),hashlib.sha256)
-        signature = hash.hexdigest()
-        return signature
-    
-    def GetBalance(self):
-        balanceendpoint = '/v5/account/wallet-balance'
-        parameters = 'accountType={}&coin=USDT'.format(self.account_type)
-        signature = self.SignParameters(parameters)
-        response = self.HTTP_Request(balanceendpoint, 'GET', parameters,'check')
-        print("Account info: ", response)
-
-    def HTTP_Request(self, endPoint,method,payload,Info):
+        
+    def HTTP_Request(self, endPoint,method,payload):
         self.time_stamp=str(int(time.time() * 10 ** 3))
         signature=self.SignParameters(payload)
         headers = {
@@ -97,7 +87,27 @@ class BybitExchangeCustoms:
         else:
             response = self.client.request(method, self.main_url+endPoint+"?"+payload, headers=headers)
 
-        return (response.text)
+        return json.loads(response.text)
+    
+    def SignParameters(self, payload):
+        param_str= str(self.time_stamp) + self.api_key + self.recv_window + payload
+        hash = hmac.new(bytes(self.api_secret, "utf-8"), param_str.encode("utf-8"),hashlib.sha256)
+        signature = hash.hexdigest()
+        return signature
+    
+    def GetBalance(self):
+        balanceendpoint = '/v5/account/wallet-balance'
+        parameters = 'accountType={}&coin=USDT'.format(self.account_type)
+        signature = self.SignParameters(parameters)
+        response = self.HTTP_Request(balanceendpoint, 'GET', parameters)
+        print("Account info: ", response)
+
+    def FetchMyTrades(self,symbol):
+        parameters = "category=linear"
+        parameters += "&symbol={}".format(symbol)
+        response = self.HTTP_Request(self.trades_get_url, "GET", parameters)
+
+        return {"info":response['result']['list']}
 
     def CreateOrder(
             self,
@@ -151,8 +161,7 @@ class BybitExchangeCustoms:
         urlparams += '"orderLinkId": "'+str(orderLinkId)+'"'
         urlparams += "}"
 
-        response = self.HTTP_Request(self.order_create_endpoint,'POST',urlparams,"Create")
-        response = json.loads(response)
+        response = self.HTTP_Request(self.order_create_endpoint,'POST',urlparams)
         
         return (response)
     
@@ -165,5 +174,5 @@ class BybitExchangeCustoms:
         urlparams += '"symbol" : "'+symbol+'"'
         urlparams += "}"
 
-        response = self.HTTP_Request(self.order_cancel_all_endpoint, 'POST', urlparams, 'cancel')
+        response = self.HTTP_Request(self.order_cancel_all_endpoint, 'POST', urlparams)
         return (response)

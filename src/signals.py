@@ -81,18 +81,33 @@ class Signals:
                     self.order_mgt.SellOrder(self.configData.pairsInformation[self.pair]['id'], self.pair, self.best_ask, 
                                              self.last_price_time, self.last_candle_data)
 
-            if  self.order_mgt.positiondatabase.buyAmount>0 and self.best_bid>=self.last_candle_data['ema']:
+            if  self.order_mgt.positiondatabase.buyAmount!=0 and self.best_bid>=self.last_candle_data['ema']:
                 logging.info('closing buy order')
                 print('closing buy order')
                 self.order_mgt.CloseBuyOrder(self.configData.pairsInformation[self.pair]['id'], 0, 
                                              self.best_bid, self.last_price_time, self.last_candle_data)
 
-            if self.order_mgt.positiondatabase.sellAmount<0 and self.best_ask<=self.last_candle_data['ema']:
+            if self.order_mgt.positiondatabase.sellAmount!=0 and self.best_ask<=self.last_candle_data['ema']:
                 logging.info('closing sell order')
                 print('closing sell order')
                 self.order_mgt.CloseSellOrder(self.configData.pairsInformation[self.pair]['id'], 0,
                                               self.best_bid, self.last_price_time, self.last_candle_data)
-                
+            
+            if self.order_mgt.positiondatabase.close_remnant_orders:
+                if self.order_mgt.positiondatabase.remnant_order_type==0:
+                    print("Removing Buy Remnant orders due to profit or stoploss hit.")
+                    self.order_mgt.CloseBuyOrder(self.configData.pairsInformation[self.pair]['id'], 0, 
+                                             self.best_bid, self.last_price_time, self.last_candle_data)
+                    self.order_mgt.positiondatabase.close_remnant_orders = False
+                    self.order_mgt.positiondatabase.remnant_order_type = -1
+
+                elif self.order_mgt.positiondatabase.remnant_order_type==1:
+                    print("Removing Sell Remnant orders due to profit or stoploss hit.")
+                    self.order_mgt.CloseSellOrder(self.configData.pairsInformation[self.pair]['id'], 0,
+                                              self.best_bid, self.last_price_time, self.last_candle_data)
+                    self.order_mgt.positiondatabase.close_remnant_orders = False
+                    self.order_mgt.positiondatabase.remnant_order_type = -1
+
             ##check if we past trading time and set a new trading time for the current day
             if (self.last_price_time) > self.trade_end_milsecs:
                 self.SetTradingTime()
@@ -109,16 +124,20 @@ class Signals:
 
                 #populate signals modifies self.df and adds signals to it
                 self.PopulateSignals(self.df)
+
+                #get position at the time of current bar start
+                #put here to reduce the number of api calls
+                self.order_mgt.positiondatabase.GetPositions(self.configData.pairsInformation[self.pair]['id'])
+
                 print(f"information for pair: {self.pair}")
-                print("buy positions amount:",self.order_mgt.positiondatabase.buyAmount)
-                print("sell positions amount: ",self.order_mgt.positiondatabase.sellAmount)
+                print("buy positions amount current open:",self.order_mgt.positiondatabase.buyAmount)
+                print("sell positions amount current open: ",self.order_mgt.positiondatabase.sellAmount)
                 print('last bar ema: ',self.last_candle_data['ema'])
                 print('last bar upBand: ',self.last_candle_data['upper_band'])
                 print('last bar lowerBand: ', self.last_candle_data['lower_band'])
                 print('last close: ', self.last_candle_data['close'])
                 
             #check for positions open
-            self.order_mgt.positiondatabase.GetPositions(self.configData.pairsInformation[self.pair]['id'])
             order_book = self.configData.exchange.fetch_order_book(self.pair, 5)
             self.best_bid = order_book['bids'][0][0]
             self.best_ask = order_book['asks'][0][0]
@@ -135,16 +154,15 @@ class Signals:
         boll = BollingerBands(self.df['close'], self.configData.bollinger_period, 
                               self.configData.bollinger_deviation)
 
-        self.df['upper_band'] = boll.bollinger_hband()
-        self.df['lower_band'] = boll.bollinger_lband()
+        self.df['upper_band'] = round(boll.bollinger_hband(), self.configData.digits[self.pair])
+        self.df['lower_band'] = round(boll.bollinger_lband(), self.configData.digits[self.pair])
 
         ema = EMAIndicator(self.df['close'], self.configData.ema_period)
-        self.df['ema'] = ema.ema_indicator()
+        self.df['ema'] = round(ema.ema_indicator(), self.configData.digits[self.pair])
         
-        self.df['atr'] = (AverageTrueRange(self.df['high'], self.df['low'], self.df['close'], 
-                                           self.configData.atr_period).average_true_range())
-        self.df['hour'] = self.df['datetime'].apply(lambda x: datetime.datetime.fromtimestamp(x / 1000).hour)
-        
+        self.df['atr'] = round(AverageTrueRange(self.df['high'], self.df['low'], self.df['close'], 
+                                           self.configData.atr_period).average_true_range(), 
+                                           self.configData.digits[self.pair])
 
     def PopulateSignals(self, dataframe: pd.DataFrame):
         dataframe.loc[(
