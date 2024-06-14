@@ -8,20 +8,18 @@
         "SAND/USDT:USDT",
         "DOGE/USDT:USDT"
     ],
-    "timeframe":"1m",
-    "apiKey":"SsRPUw7P1FOmLOLQRS",
-    "apiSecret":"S0BKGIpvwfGqdh2RMckzmQvI053yK3qrblPJ",
+    "timeframe":"5m",
+    "apiKey":"",
+    "apiSecret":"",
     "downloadNewData":true,
     "test_net":false,
     "is_demo":true,
     "stakeAmount":100,
     "takeProfit":[
-        100,
-        1000
+        100
     ],
     "stopLoss":[
-        100,
-        1000
+        100
     ],
     "tradeStartHour":1,
     "tradingHours":22,
@@ -33,11 +31,6 @@
     "emaPeriod":20,
     "atrPeriod":14,
     "atrPurchaseValue":[
-        20,
-        4000,
-        150,
-        200,
-        3,
-        120
+        20
     ]
 }
