@@ -59,8 +59,6 @@ class Signals:
         try:
             self.CheckLastCandleSignal()
             if not self.traded_last_bar:
-                self.order_mgt.SellOrder(self.configData.pairsInformation[self.pair]['id'], self.pair, self.best_ask, 
-                                             self.last_price_time, self.last_candle_data)
                 if ((self.last_candle_data['buy_signal']==1) and 
                     (self.best_ask>=self.last_candle_data['lower_band']) and
                     (self.order_mgt.positiondatabase.buyAmount==0) and
@@ -171,7 +169,7 @@ class Signals:
         'sell_signal'] = 1
         
         self.last_candle_data = dataframe.iloc[-1].squeeze()
-
+        
     def SetTradingTime(self):
         todays_date = datetime.datetime.now(tz=datetime.timezone.utc)
         self.trade_start_time = (datetime.datetime(todays_date.year, todays_date.month,

@@ -99,8 +99,8 @@ class BotConfigClass:
             self.points[pair] = 1/pow(10,self.digits[pair])
             self.takeProfit[pair] = round(int(self.ExtractFeature('takeProfit', index, [100]))*self.points[pair], self.digits[pair])
             self.stopLoss[pair]   = round(int(self.ExtractFeature('stopLoss', index, [100]))*self.points[pair], self.digits[pair])
-            self.atr_purchase_value[pair] = round(int(self.ExtractFeature('atrPurchaseValue',index, [15]))*self.points[pair], self.digits[pair])
-            self.max_spread_values[pair] = round(int(self.ExtractFeature('spread', index, [100]))*self.points[pair], self.digits[pair])
+            self.atr_purchase_value[pair] = round(float(self.ExtractFeature('atrPurchaseValue',index, [15])), self.digits[pair])
+            self.max_spread_values[pair] = round(float(self.ExtractFeature('maxSpread', index, [100])), self.digits[pair])
             self.set_amounts()
 
         self.timeframe = self.configData['timeframe']

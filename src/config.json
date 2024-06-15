@@ -8,7 +8,7 @@
         "SAND/USDT:USDT",
         "DOGE/USDT:USDT"
     ],
-    "timeframe":"5m",
+    "timeframe":"1m",
     "apiKey":"",
     "apiSecret":"",
     "downloadNewData":true,
@@ -23,21 +23,29 @@
         700
     ],
     "takeProfit":[
-        100
+        1000
     ],
     "stopLoss":[
-        100
+        1000
     ],
     "tradeStartHour":1,
-    "tradingHours":22,
+    "tradingHours":20,
     "maxSpread":[
-        100
+        0.001,
+        10.0,
+        2,
+        2,
+        0.0001
     ],
     "bollingerPeriod":20,
     "bollingerDeviation":2,
     "emaPeriod":20,
     "atrPeriod":14,
     "atrPurchaseValue":[
-        20
+        0.0005,
+        60.0,
+        5,
+        1.5,
+        0.0001
     ]
 }
