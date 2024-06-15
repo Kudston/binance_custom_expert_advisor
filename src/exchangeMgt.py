@@ -123,7 +123,7 @@ class BybitExchangeCustoms:
         positionIdx = 1 if side=='buy' else 2
 
         precision = float(params.get('precision',2))
-        quantity = int((float(amount)/float(price))/precision)*precision
+        quantity = float(amount)
 
         reduceOnly = bool(params.get('reduceOnly',False))
         if reduceOnly:
@@ -141,6 +141,15 @@ class BybitExchangeCustoms:
         side = side.lower().capitalize()
         type = type.lower().capitalize()
 
+        stopLoss = params.get('stopLoss', None)
+        takeProfit = params.get('takeProfit', None)
+
+        if stopLoss is not None:
+            stopLoss = stopLoss.get('triggerPrice', 0)
+        
+        if takeProfit is not None:
+            takeProfit = takeProfit.get('triggerPrice', 0)
+
         urlparams = "{"
         urlparams += '"category":"linear",'
         urlparams += '"symbol" : "'+symbol+'",'
@@ -156,11 +165,16 @@ class BybitExchangeCustoms:
                 urlparams += '"triggerPrice": "'+str(price)+'",'
                 urlparams += '"triggerDirection": "'+str(triggerDirection)+'",'
 
-        urlparams += '"qty": "'+str(quantity)+'",'
-        
+        if takeProfit is not None:
+            urlparams += '"takeProfit": "'+str(takeProfit)+'",'
+
+        if stopLoss is not None:
+            urlparams += '"stopLoss": "'+str(stopLoss)+'",'
+
+        urlparams += '"qty": "'+str(quantity)+'",'        
         urlparams += '"orderLinkId": "'+str(orderLinkId)+'"'
         urlparams += "}"
-
+        
         response = self.HTTP_Request(self.order_create_endpoint,'POST',urlparams)
         
         return (response)

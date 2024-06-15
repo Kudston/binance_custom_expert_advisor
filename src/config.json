@@ -14,7 +14,14 @@
     "downloadNewData":true,
     "test_net":false,
     "is_demo":true,
-    "stakeAmount":100,
+    "stakeAmount":[
+        200,
+        0.002,
+        150,
+        0.02,
+        250,
+        700
+    ],
     "takeProfit":[
         100
     ],

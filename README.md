@@ -16,3 +16,9 @@ Notes:
     - currently working with bybit exchange api
     - your specified pairs has to be in hedge mode
     - only for trading futures 
+
+    - A VERY IMPORTANT ONE:
+        - the stake amount when using bybit should be specified in coin amount not usdt, but for other exchanges use usdt amount
+        - A list of amount to match different coins amount respectively, if any coin does not have an amount specified an error will be thrown.
+HEADS UP:
+    - local position storage does not store positions closed by takeprofit or stoploss price.

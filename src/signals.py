@@ -59,6 +59,8 @@ class Signals:
         try:
             self.CheckLastCandleSignal()
             if not self.traded_last_bar:
+                self.order_mgt.SellOrder(self.configData.pairsInformation[self.pair]['id'], self.pair, self.best_ask, 
+                                             self.last_price_time, self.last_candle_data)
                 if ((self.last_candle_data['buy_signal']==1) and 
                     (self.best_ask>=self.last_candle_data['lower_band']) and
                     (self.order_mgt.positiondatabase.buyAmount==0) and
@@ -92,22 +94,7 @@ class Signals:
                 print('closing sell order')
                 self.order_mgt.CloseSellOrder(self.configData.pairsInformation[self.pair]['id'], 0,
                                               self.best_bid, self.last_price_time, self.last_candle_data)
-            
-            if self.order_mgt.positiondatabase.close_remnant_orders:
-                if self.order_mgt.positiondatabase.remnant_order_type==0:
-                    print("Removing Buy Remnant orders due to profit or stoploss hit.")
-                    self.order_mgt.CloseBuyOrder(self.configData.pairsInformation[self.pair]['id'], 0, 
-                                             self.best_bid, self.last_price_time, self.last_candle_data)
-                    self.order_mgt.positiondatabase.close_remnant_orders = False
-                    self.order_mgt.positiondatabase.remnant_order_type = -1
-
-                elif self.order_mgt.positiondatabase.remnant_order_type==1:
-                    print("Removing Sell Remnant orders due to profit or stoploss hit.")
-                    self.order_mgt.CloseSellOrder(self.configData.pairsInformation[self.pair]['id'], 0,
-                                              self.best_bid, self.last_price_time, self.last_candle_data)
-                    self.order_mgt.positiondatabase.close_remnant_orders = False
-                    self.order_mgt.positiondatabase.remnant_order_type = -1
-
+                
             ##check if we past trading time and set a new trading time for the current day
             if (self.last_price_time) > self.trade_end_milsecs:
                 self.SetTradingTime()
@@ -170,7 +157,7 @@ class Signals:
             &(dataframe.close<dataframe.ema)
             &(dataframe.datetime>=self.trade_start_milsecs)
             &(dataframe.datetime<=self.trade_end_milsecs)
-            &(dataframe.atr>=self.configData.atr_purchase_value[self.pair])
+            &(dataframe.atr<=self.configData.atr_purchase_value[self.pair])
             &(dataframe.volume>0)),
         'buy_signal'] = 1
 
@@ -179,7 +166,7 @@ class Signals:
             &(dataframe.close>dataframe.ema)
             &(dataframe.datetime>=self.trade_start_milsecs)
             &(dataframe.datetime<=self.trade_end_milsecs)
-            &(dataframe.atr>=self.configData.atr_purchase_value[self.pair])
+            &(dataframe.atr<=self.configData.atr_purchase_value[self.pair])
             &(dataframe.volume>0)),
         'sell_signal'] = 1
         

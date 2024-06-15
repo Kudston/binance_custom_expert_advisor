@@ -43,6 +43,7 @@ class BotConfigClass:
         self.stopLoss = {}
         self.atr_purchase_value = {}
         self.max_spread_values = {}
+        self.stakeAmount = {}
         self.tradable_pairs = []
         self.market_pairs = []
         self.testnet  = bool(self.configData.get('test_net', True))
@@ -51,7 +52,6 @@ class BotConfigClass:
         self.api_secret = str(self.configData.get('apiSecret', ''))
         self.verify_configurations()
         self.TimeFrameClass = TimeframeMgt(self.timeframe, self.timeframes)
-        self.stakeAmount = int(self.configData.get('stakeAmount', 100))
         self.download_new_data = bool(self.configData.get('downloadNewData', False))
         self.trade_start_time = int(self.configData.get('tradeStartHour',0))
         self.trading_hour   = int(self.configData.get('tradingHours', 23))
@@ -101,12 +101,14 @@ class BotConfigClass:
             self.stopLoss[pair]   = round(int(self.ExtractFeature('stopLoss', index, [100]))*self.points[pair], self.digits[pair])
             self.atr_purchase_value[pair] = round(int(self.ExtractFeature('atrPurchaseValue',index, [15]))*self.points[pair], self.digits[pair])
             self.max_spread_values[pair] = round(int(self.ExtractFeature('spread', index, [100]))*self.points[pair], self.digits[pair])
+            self.set_amounts()
 
         self.timeframe = self.configData['timeframe']
         print("tp: ",self.takeProfit)
         print("sl:",self.stopLoss)
         print("atr_purch: ", self.atr_purchase_value)
         print("max spread: ", self.max_spread_values)
+        print("Amounts: ", self.stakeAmount)
 
         logging.info("digits: {}".format(self.digits))
         logging.info("points: {}".format(self.points))
@@ -120,3 +122,13 @@ class BotConfigClass:
         except:
             value = self.configData.get(feature_name, default)[0]
             return value
+
+    def set_amounts(self):
+        amounts = self.configData.get("stakeAmount",[])
+        if len(amounts)<len(self.tradable_pairs):
+            raise Exception("Amounts does not match the number of pairs provided.")
+        elif len(amounts)>len(self.tradable_pairs):
+            print("Warning: Check amount for correctness as the provided list is greater than pairs.")
+
+        for index, pair in enumerate(self.tradable_pairs):
+            self.stakeAmount[pair] = amounts[index]
